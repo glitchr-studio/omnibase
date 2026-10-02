@@ -1,0 +1,9 @@
+# The back office (omnibase/admin) at /admin: the demo's member Marki is an
+# admin. Users are addressed by username in admin URLs, as every omnibase
+# application does.
+admin:
+    url_identifier:
+        fields: ['slug', 'uuid']
+        lowercase: true
+        entities:
+            App\Entity\User: ['username']

@@ -1,0 +1,43 @@
+controllers:
+    resource:
+        path: ../src/Controller/
+        namespace: App\Controller
+    type: attribute
+
+# base's own controllers: login, registration, the profile.
+base_controller:
+    resource: "@BaseBundle/Controller"
+    type: attribute
+    prefix: /
+
+# The back office's CRUDs (omnibase/admin), /admin.
+base_admin_crud:
+    resource: .
+    type: base_admin
+
+# Every plugin's pages. Their Bundle::getPath() is the package root (code
+# under src/), hence the src/ in each resource.
+marketplace_controller:
+    resource: "@MarketplaceBundle/src/Controller/Client"
+    type: attribute
+    prefix: /
+
+forge_controller:
+    resource: "@ForgeBundle/src/Controller"
+    type: attribute
+    prefix: /
+
+forum_controller:
+    resource: "@ForumBundle/src/Controller/Client"
+    type: attribute
+    prefix: /
+
+mailbox_controller:
+    resource: "@MailboxBundle/src/Controller/Client"
+    type: attribute
+    prefix: /
+
+# git/git-bundle's viewer, under git.route_prefix.
+git:
+    resource: '@GitBundle/src/Controller/'
+    type: attribute

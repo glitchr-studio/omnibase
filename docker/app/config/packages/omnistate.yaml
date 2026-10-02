@@ -1,0 +1,6 @@
+# Public registers (glitchr/omnistate), asked by the shop's checkout: VAT
+# numbers with VIES, French companies with Recherche d'entreprises. Free and
+# keyless; answers kept a day.
+omnistate:
+    cache: cache.app
+    ttl: 86400

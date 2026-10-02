@@ -1,0 +1,13 @@
+# git/git-bundle, the repository viewer the forge's project dashboard links
+# to: every project and software with a repository shows up through
+# Base\Forge\Git\ForgeRepositoryProvider; this very checkout is listed too.
+git:
+    route_prefix: /git
+    access_role: ROLE_USER
+    repository_attribute: GIT_VIEW
+    repositories:
+        omnibase:
+            path: /srv/omnibase
+            label: 'glitchr/omnibase'
+            description: 'The checkout this demo was built from'
+            default_branch: HEAD

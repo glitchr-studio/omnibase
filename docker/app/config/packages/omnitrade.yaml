@@ -1,0 +1,9 @@
+# The payment providers the shop's methods name (PaymentMethod.gatewayFactory
+# = a gateway here): Stripe, off until STRIPE_API_KEY is set in docker/.env.
+omnitrade:
+    gateways:
+        stripe:
+            factory: stripe
+            options:
+                api_key: '%env(default::STRIPE_API_KEY)%'
+                webhook_secret: '%env(default::STRIPE_WEBHOOK_SECRET)%'

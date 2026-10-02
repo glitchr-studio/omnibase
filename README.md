@@ -9,6 +9,20 @@ one-to-one.
 Requires PHP ≥ 8.1 and Symfony 6, 7 or 8. Licensed LGPL-3.0-or-later
 (see `COPYING` / `COPYING.LESSER`).
 
+## Docker: every plugin, running
+
+`docker/` builds this checkout into one Symfony application with every `omnibase/*` plugin -
+the back office, the shop, the forge, the forum, the mailbox, the docs - on SQLite, with a demo
+page that seeds members and a shop and signs you in:
+
+```sh
+cd docker
+docker compose up                                        # → http://localhost:8000/
+docker compose run --rm omnibase check                   # container and templates linted, routes counted
+docker compose -f compose.yml -f compose.checkouts.yml up   # the checkouts beside this one instead of Packagist
+docker compose run --rm test                             # this bundle's test suite
+```
+
 ## Installation
 
 The package is resolved from GitLab (`gitlab.glitchr.dev/public-repository/symfony/bundle/base/component`):

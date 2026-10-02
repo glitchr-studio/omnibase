@@ -1,0 +1,11 @@
+# The carriers the shop's shipping methods name (ShippingMethod.gatewayName
+# = a gateway here): click & collect, and Mondial Relay on its public test
+# brand.
+omnibus:
+    gateways:
+        retrait:
+            factory: offline
+        relais:
+            factory: mondial_relay
+            options:
+                sandbox: true

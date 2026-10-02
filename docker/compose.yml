@@ -1,0 +1,37 @@
+# glitchr/omnibase with every omnibase/* plugin, runnable:
+#
+#   docker compose up                 # → http://localhost:8000/ (OMNIBASE_PORT to change)
+#   docker compose run --rm omnibase check          # container and templates linted, routes counted
+#   docker compose run --rm omnibase console debug:router
+#   docker compose -f compose.yml -f compose.checkouts.yml run --rm omnibase test marketplace   # a plugin's tests, on its checkout
+#   docker compose run --rm test                    # this bundle's test suite
+#
+# The plugins come from Packagist; to run the checkouts beside this one
+# instead (the workspace: ../admin, ../marketplace...), add the overlay:
+#
+#   docker compose -f compose.yml -f compose.checkouts.yml up
+name: omnibase-harness
+
+services:
+  omnibase:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: glitchr/omnibase-harness
+    ports:
+      - "${OMNIBASE_PORT:-8000}:8000"
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - data:/srv/demo/var
+
+  test:
+    build:
+      context: ..
+      dockerfile: Dockerfile.test
+    volumes:
+      - ../var/coverage:/srv/base-bundle/var/coverage
+
+volumes:
+  data:

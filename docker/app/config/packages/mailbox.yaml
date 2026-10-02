@@ -1,0 +1,9 @@
+# The mailbox (omnibase/mailbox) at /messagerie. No wait between two messages: a demo.
+mailbox:
+    per_page: 20
+    inbox_limit: 100
+    flood_interval: 0
+    subject_max_length: 55
+    content_max_length: 10000
+    max_recipients: 5
+    required_role: ROLE_USER

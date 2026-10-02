@@ -1,0 +1,13 @@
+# The forge (omnibase/forge): software and licences, downloads, the Composer
+# repository, client projects, support hours and quotes - sold through the
+# shop's "support" and "logiciels" stores. Archives stay under var/storage;
+# with no nginx in front, PHP streams the downloads (accel_prefix empty).
+forge:
+    storage_dir: '%kernel.project_dir%/var/storage/forge'
+    repositories_dir: '%kernel.project_dir%/var/storage/repositories'
+    accel_prefix: ''
+    support_store: support
+    software_store: logiciels
+    hourly_rate: 6000
+    low_balance_minutes: 120
+    contact_email: '%env(MAILER_CONTACT)%'

@@ -1,0 +1,13 @@
+# The checkouts beside this one, mounted over the installed packages: what
+# you edit is what runs. OMNIBASE_PLUGINS (.env) is the directory holding
+# them, ../.. by default - the workspace this core sits in.
+services:
+  omnibase:
+    volumes:
+      - ..:/srv/demo/vendor/glitchr/omnibase
+      - ${OMNIBASE_PLUGINS:-../..}/admin:/srv/demo/vendor/omnibase/admin
+      - ${OMNIBASE_PLUGINS:-../..}/marketplace:/srv/demo/vendor/omnibase/marketplace
+      - ${OMNIBASE_PLUGINS:-../..}/forge:/srv/demo/vendor/omnibase/forge
+      - ${OMNIBASE_PLUGINS:-../..}/forum:/srv/demo/vendor/omnibase/forum
+      - ${OMNIBASE_PLUGINS:-../..}/mailbox:/srv/demo/vendor/omnibase/mailbox
+      - ${OMNIBASE_PLUGINS:-../..}/docs:/srv/demo/vendor/omnibase/docs
