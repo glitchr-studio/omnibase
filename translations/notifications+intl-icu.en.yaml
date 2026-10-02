@@ -63,6 +63,9 @@ maintenance:
 launcher:
     banner: "This website is <b>not yet</b> visible. Release date on {0} at {1}"
 
+changePassword:
+    success: "Your password is set, welcome!"
+
 resetPassword:
     title: "Reset your password"
     csrfToken: "Invalid CSRF token detected. You can't reset your password"

@@ -197,6 +197,11 @@ return static function (ContainerConfigurator $container): void {
         ->autowire()
         ->tag('kernel.event_subscriber');
 
+    // An account made with a password it did not choose (user:create): its owner chooses one first.
+    $services->set('Base\\Subscriber\\PasswordChangeSubscriber')
+        ->autowire()
+        ->tag('kernel.event_subscriber');
+
     // Emails the account holder when their account is signed into from a
     // browser it has not been signed into before.
     $services->set('Base\\Subscriber\\NewDeviceSubscriber')
@@ -530,6 +535,10 @@ return static function (ContainerConfigurator $container): void {
     // Console commands
     $services->set('Base\Console\Command\UserNotificationCommand')
         ->parent('Base\Console\Command')
+        ->tag('console.command');
+
+    $services->set('Base\Console\Command\UserCreateCommand')
+        ->autowire()
         ->tag('console.command');
 
     $services->set('Base\Console\Command\UploaderEntitiesCommand')

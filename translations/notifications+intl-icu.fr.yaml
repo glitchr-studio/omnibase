@@ -83,6 +83,9 @@ logout:
     already: "Bizarre, tu n'es pas connecté :)"
     already._polite: "Bizarre, vous n'êtes pas connecté :)"
 
+changePassword:
+    success: "Ton mot de passe est choisi, bienvenue !"
+
 resetPassword:
     title: "Réinitialisation de ton mot de passe"
     title._polite: "Réinitialisation de votre mot de passe"

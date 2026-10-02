@@ -629,8 +629,9 @@ class SecurityController extends AbstractController
             return $this->redirectToRoute('user_profile');
         }
 
+        // A reset link's token, still valid: not one of another kind, not an expired or revoked one.
         $resetPasswordToken = $this->tokenRepository->findOneByValue($token);
-        if (!$resetPasswordToken) {
+        if (!$resetPasswordToken || 'reset-password' !== $resetPasswordToken->getName() || !$resetPasswordToken->isValid()) {
 
             $notification = new Notification("resetPassword.invalidToken");
             $notification->send("danger");
@@ -671,6 +672,48 @@ class SecurityController extends AbstractController
 
             return $this->render('security/reset_password.html.twig', ['form' => $form->createView()]);
         }
+    }
+
+    /**
+     * A password to choose, before anything else: the account was made with one its owner did not
+     * choose (user:create, a "change-password" token; PasswordChangeSubscriber brings them here).
+     */
+    #[Route("/change-password", name: "security_changePassword")]
+    public function ChangePassword(Request $request, LoginFormAuthenticator $authenticator, UserAuthenticatorInterface $userAuthenticator): Response
+    {
+        $user = $this->getUser();
+        if (!$user instanceof \Base\Entity\User) {
+            return $this->redirectToRoute('security_login');
+        }
+
+        $changePasswordToken = $user->getValidToken(\Base\Subscriber\PasswordChangeSubscriber::TOKEN);
+        if (!$changePasswordToken) {
+            return $this->redirectToRoute($this->router->getRouteIndex());
+        }
+
+        $form = $this->createForm(SecurityResetPasswordConfirmType::class);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $changePasswordToken->revoke();
+            $user->setPlainPassword($form->get('plainPassword')->getData());
+            $this->entityManager->flush();
+
+            // A new password ends the session signed with the old one: signed in again, at once.
+            $rememberMeBadge = new RememberMeBadge();
+            $rememberMeBadge->enable();
+            $userAuthenticator->authenticateUser($user, $authenticator, $request, [$rememberMeBadge]);
+
+            (new Notification("changePassword.success"))->send("success");
+
+            return $this->redirectToRoute($this->router->getRouteIndex());
+        }
+
+        return $this->render('security/reset_password.html.twig', [
+            'form' => $form->createView(),
+            'heading' => '@forms.changePassword.title',
+            'description' => '@forms.changePassword.description',
+        ]);
     }
 
     /**

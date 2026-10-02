@@ -46,6 +46,9 @@ contact:
         reset: .. or erase everything.
 
 
+changePassword:
+    title: "Choose your password"
+    description: "This account was created with a temporary password: choose your own before going on."
 resetPassword:
     title: "Reset your password"
     descriptionRequest: "If you forgot your password or just want to reset it, please enter your email address !

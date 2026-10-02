@@ -46,6 +46,9 @@ contact:
         reset: .. ou l'effacer en cliquant ici
 
 
+changePassword:
+    title: "Choisissez votre mot de passe"
+    description: "Ce compte a été créé avec un mot de passe provisoire : choisissez le vôtre avant de continuer."
 resetPassword:
     title: "Réinitialiser votre mot de passe"
     descriptionRequest: "Si tu as oublié ton mot de passe ou si tu veux le réinitialiser, tu es au bon endroit !.
