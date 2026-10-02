@@ -20,6 +20,12 @@ wallpaper_contact_confirmation:
   excerpt: "Dear {0}, we just received the message you sent us earlier today. Here is a transcript of your message"
   content: "<b>{0}</b>. {1}"
 
+accountCreated:
+    subject: "Your account is ready"
+    content: "An account has just been created for you. Your username: <b>{0}</b>. Your temporary password: <b>{1}</b>. You will choose your own at your first sign-in."
+    action_text: "Sign in"
+    footer: "If you were not expecting this account, ignore this message."
+
 resetPassword:
   subject: "Reset your password"
   content:

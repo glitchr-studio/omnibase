@@ -186,6 +186,34 @@ class Notifier extends BaseNotifier implements NotifierInterface
     }
 
     /**
+     * An account made for someone (user:create): its username, its temporary password - to be
+     * changed at the first sign-in - and the way in.
+     *
+     * @param User $user
+     * @param string $password
+     * @return Notification
+     */
+    public function accountCreated(User $user, string $password)
+    {
+        $notification = new Notification("accountCreated.sent");
+        $notification->setUser($user);
+
+        $notification->setHtmlTemplate("email.html.twig");
+        $notification->setHtmlParameters([
+            "subject" => $this->translator->trans("@emails.accountCreated.subject"),
+            "content" => $this->translator->trans("@emails.accountCreated.content", [
+                htmlspecialchars((string) (method_exists($user, 'getUsername') ? $user->getUsername() : $user->getUserIdentifier())),
+                htmlspecialchars($password),
+            ]),
+            "action_text" => $this->translator->trans("@emails.accountCreated.action_text"),
+            "action_url" => $this->router->getUrl("security_login"),
+            "footer_text" => $this->translator->trans("@emails.accountCreated.footer"),
+        ]);
+
+        return $notification;
+    }
+
+    /**
      * @param User $user
      * @param Token $token
      * @return Notification

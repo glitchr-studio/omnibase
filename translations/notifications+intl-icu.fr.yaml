@@ -83,6 +83,9 @@ logout:
     already: "Bizarre, tu n'es pas connecté :)"
     already._polite: "Bizarre, vous n'êtes pas connecté :)"
 
+accountCreated:
+    sent: "L'e-mail de bienvenue est parti."
+
 changePassword:
     success: "Ton mot de passe est choisi, bienvenue !"
 

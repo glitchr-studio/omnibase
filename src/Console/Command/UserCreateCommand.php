@@ -3,6 +3,7 @@
 namespace Base\Console\Command;
 
 use App\Entity\User;
+use Base\Notifier\NotifierInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Base\Entity\User\Token;
 use Base\Enum\UserRole;
@@ -19,14 +20,17 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  * An account made from the command line - someone's own to test a site, a colleague's -,
  * verified and approved, with a password it did not choose: generated and shown once (or
  * given with --password), to be changed at its first sign-in (a "change-password" token,
- * PasswordChangeSubscriber) unless --keep-password. A plain Symfony command (not
+ * PasswordChangeSubscriber) unless --keep-password; e-mailed its username and password unless
+ * --no-email. A plain Symfony command (not
  * Base\Console\Command, which wants a ConsoleOutput): it runs from scripts and tests too.
  */
 #[AsCommand(name: 'user:create', description: 'An account, its password to change at the first sign-in')]
 class UserCreateCommand extends Command
 {
-    public function __construct(private readonly EntityManagerInterface $entityManager)
-    {
+    public function __construct(
+        private readonly EntityManagerInterface $entityManager,
+        private readonly NotifierInterface $notifier,
+    ) {
         parent::__construct();
     }
 
@@ -37,7 +41,8 @@ class UserCreateCommand extends Command
             ->addArgument('email', InputArgument::REQUIRED, 'Its e-mail address')
             ->addOption('role', 'r', InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'Its role(s): USER, ADMIN, SUPERADMIN...', ['USER'])
             ->addOption('password', 'p', InputOption::VALUE_REQUIRED, 'Its password (otherwise generated)')
-            ->addOption('keep-password', null, InputOption::VALUE_NONE, 'Do not ask for a new password at the first sign-in');
+            ->addOption('keep-password', null, InputOption::VALUE_NONE, 'Do not ask for a new password at the first sign-in')
+            ->addOption('no-email', null, InputOption::VALUE_NONE, 'Do not e-mail the account its username and password');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -87,7 +92,12 @@ class UserCreateCommand extends Command
         $this->entityManager->persist($user);
         $this->entityManager->flush();
 
-        $io->success(sprintf('%s (%s), %s.', $username, $email, implode(', ', $roles)));
+        // Its owner told: username, temporary password, the way in (Notifier::accountCreated).
+        if (!$input->getOption('no-email')) {
+            $this->notifier->sendAccountCreated($user, $password);
+        }
+
+        $io->success(sprintf('%s (%s), %s%s.', $username, $email, implode(', ', $roles), $input->getOption('no-email') ? '' : ' - e-mailed'));
         $io->writeln(sprintf('Password: <info>%s</info>%s', $password, $input->getOption('keep-password') ? '' : ' - to be changed at the first sign-in'));
 
         return self::SUCCESS;

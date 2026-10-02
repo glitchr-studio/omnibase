@@ -20,6 +20,12 @@ contact_confirmation:
   excerpt: "Nous venons de recevoir votre message. Ci-après la transcription de ce que vous nous avez écrit"
   content: "<b>{0}</b>. {1}"
 
+accountCreated:
+    subject: "Ton compte est prêt"
+    content: "Un compte vient d'être créé pour toi. Ton identifiant : <b>{0}</b>. Ton mot de passe provisoire : <b>{1}</b>. À ta première connexion, tu choisiras le tien."
+    action_text: "Se connecter"
+    footer: "Si tu n'attendais pas ce compte, ignore ce message."
+
 resetPassword:
     subject: "Réinitialiser ton mot de passe"
     subject._polite: "Réinitialiser votre mot de passe"

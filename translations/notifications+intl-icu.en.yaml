@@ -63,6 +63,9 @@ maintenance:
 launcher:
     banner: "This website is <b>not yet</b> visible. Release date on {0} at {1}"
 
+accountCreated:
+    sent: "The welcome e-mail is sent."
+
 changePassword:
     success: "Your password is set, welcome!"
 
