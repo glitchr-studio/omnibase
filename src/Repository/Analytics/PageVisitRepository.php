@@ -27,8 +27,9 @@ class PageVisitRepository extends ServiceEntityRepository
         $table = $this->getClassMetadata()->getTableName();
         $hour = $date->setTime((int) $date->format("H"), 0, 0);
 
-        $this->getEntityManager()->getConnection()->executeStatement(
-            "INSERT IGNORE INTO {$table} (date, path, subject_type, subject_id) VALUES (:date, :path, :type, :id)",
+        $connection = $this->getEntityManager()->getConnection();
+        $connection->executeStatement(
+            VisitRepository::insertIgnore($connection, "{$table} (date, path, subject_type, subject_id) VALUES (:date, :path, :type, :id)"),
             [
                 "date" => $hour->format("Y-m-d H:i:s"),
                 "path" => mb_substr($path, 0, 255),
@@ -41,7 +42,8 @@ class PageVisitRepository extends ServiceEntityRepository
     /**
      * Unique views over the window: distinct (page, subject) pairs. A reader
      * reloading one page is one unique view; the same reader on two pages is
-     * two. Rows are hourly, so this is a DISTINCT, never a COUNT(*).
+     * two. Rows are hourly, so this counts DISTINCT pairs, never rows - over
+     * a DISTINCT subquery, since COUNT(DISTINCT a, b, c) is MySQL's alone.
      *
      * @param string|string[]|null $path
      */
@@ -50,7 +52,7 @@ class PageVisitRepository extends ServiceEntityRepository
         [$where, $params, $types] = $this->filters($since, $path);
 
         return (int) $this->getEntityManager()->getConnection()->fetchOne(
-            "SELECT COUNT(DISTINCT path, subject_type, subject_id) FROM {$this->getClassMetadata()->getTableName()}{$where}",
+            "SELECT COUNT(*) FROM (SELECT DISTINCT path, subject_type, subject_id FROM {$this->getClassMetadata()->getTableName()}{$where}) pairs",
             $params,
             $types,
         );
@@ -71,9 +73,9 @@ class PageVisitRepository extends ServiceEntityRepository
         [$where, $params, $types] = $this->filters($since, $path);
 
         return $this->pairs(
-            "SELECT DATE(date) AS date, COUNT(DISTINCT path, subject_type, subject_id) AS count
-             FROM {$this->getClassMetadata()->getTableName()}{$where}
-             GROUP BY DATE(date) ORDER BY DATE(date) ASC",
+            "SELECT visit_day AS date, COUNT(*) AS count
+             FROM (SELECT DISTINCT DATE(date) AS visit_day, path, subject_type, subject_id FROM {$this->getClassMetadata()->getTableName()}{$where}) pairs
+             GROUP BY visit_day ORDER BY visit_day ASC",
             $params,
             $types,
         );
@@ -89,8 +91,8 @@ class PageVisitRepository extends ServiceEntityRepository
         [$where, $params, $types] = $this->filters($since, $path);
 
         return $this->pairs(
-            "SELECT date, COUNT(DISTINCT path, subject_type, subject_id) AS count
-             FROM {$this->getClassMetadata()->getTableName()}{$where}
+            "SELECT date, COUNT(*) AS count
+             FROM (SELECT DISTINCT date, path, subject_type, subject_id FROM {$this->getClassMetadata()->getTableName()}{$where}) pairs
              GROUP BY date ORDER BY date ASC",
             $params,
             $types,

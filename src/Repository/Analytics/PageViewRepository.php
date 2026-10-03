@@ -5,6 +5,7 @@ namespace Base\Repository\Analytics;
 use Base\Database\Repository\ServiceEntityRepository;
 use Base\Entity\Analytics\PageView;
 use Doctrine\DBAL\ArrayParameterType;
+use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 
 /**
  * @extends ServiceEntityRepository<PageView>
@@ -14,11 +15,13 @@ class PageViewRepository extends ServiceEntityRepository
     /**
      * Atomic increment, not a load-modify-flush cycle - two concurrent
      * requests hitting the same page the same HOUR must both count, not
-     * race and silently drop one. Native upsert (MySQL/MariaDB-specific,
-     * same DB family as the rest of this app) rather than a Doctrine
-     * entity round-trip. $source is part of the unique key now (see
-     * PageView's docblock), so human/bot/ai hits on the same page the same
-     * hour land in three separate rows rather than one blended count.
+     * race and silently drop one. Native upsert rather than a Doctrine
+     * entity round-trip: ON DUPLICATE KEY UPDATE on MySQL/MariaDB (the
+     * applications' database), ON CONFLICT on SQLite and PostgreSQL (the
+     * omnibase harness runs on SQLite). $source is part of the unique key
+     * now (see PageView's docblock), so human/bot/ai hits on the same page
+     * the same hour land in three separate rows rather than one blended
+     * count.
      *
      * $date is bucketed down to the top of its hour here (minutes/seconds
      * zeroed) rather than trusting every caller to already pass an
@@ -39,9 +42,12 @@ class PageViewRepository extends ServiceEntityRepository
         $connection = $this->getEntityManager()->getConnection();
         $hour = $date->setTime((int) $date->format("H"), 0, 0);
 
+        $upsert = $connection->getDatabasePlatform() instanceof AbstractMySQLPlatform
+            ? "ON DUPLICATE KEY UPDATE views = views + 1"
+            : "ON CONFLICT (path, date, source) DO UPDATE SET views = {$table}.views + 1";
+
         $connection->executeStatement(
-            "INSERT INTO {$table} (path, date, source, views) VALUES (:path, :date, :source, 1)
-             ON DUPLICATE KEY UPDATE views = views + 1",
+            "INSERT INTO {$table} (path, date, source, views) VALUES (:path, :date, :source, 1) {$upsert}",
             ["path" => mb_substr($path, 0, 255), "date" => $hour->format("Y-m-d H:i:s"), "source" => $source],
         );
     }

@@ -3,6 +3,7 @@
 namespace Tests\Base\Service;
 
 use Base\Entity\Analytics\PageView;
+use Base\Repository\Analytics\VisitRepository;
 use Base\Service\Analytics;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -11,8 +12,8 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
  * End-to-end coverage of Base\Service\Analytics against a real database -
  * exercises the repositories' upsert SQL too (not mocked), since the whole
  * point of this service is that concurrent/repeat requests behave
- * correctly at the SQL level (INSERT ... ON DUPLICATE KEY UPDATE / INSERT
- * IGNORE), not just that the PHP call graph is wired correctly.
+ * correctly at the SQL level (an upsert, an insert-if-absent: MySQL's or
+ * SQLite's), not just that the PHP call graph is wired correctly.
  *
  * Runs under the host app's PHPUnit (`make tests glitchr`, KERNEL_CLASS=App\Kernel).
  */
@@ -125,8 +126,8 @@ class AnalyticsTest extends KernelTestCase
 
         $connection = $this->em->getConnection();
         $count = (int) $connection->fetchOne(
-            "SELECT COUNT(*) FROM analytics_visit WHERE DATE(date) = CURDATE() AND subject_id LIKE :id",
-            ["id" => "test-" . self::$runId . "%"],
+            "SELECT COUNT(*) FROM analytics_visit WHERE date >= :today AND subject_id LIKE :id",
+            ["today" => (new \DateTimeImmutable("today", new \DateTimeZone("UTC")))->format("Y-m-d H:i:s"), "id" => "test-" . self::$runId . "%"],
         );
         // no visitor/user rows at all from this test's own subjects,
         // since none of the earlier assertions in THIS method registered one
@@ -504,7 +505,7 @@ class AnalyticsTest extends KernelTestCase
         $before = $this->analytics->uniqueVisitors("today");
 
         $connection->executeStatement(
-            "INSERT IGNORE INTO analytics_visit (date, subject_type, subject_id) VALUES (:date, 'visitor', :id)",
+            VisitRepository::insertIgnore($connection, "analytics_visit (date, subject_type, subject_id) VALUES (:date, 'visitor', :id)"),
             ["date" => (new \DateTimeImmutable("today", $utc))->modify("+{$seedHour} hours")->format("Y-m-d H:i:s"), "id" => $visitor],
         );
         $this->analytics->track($this->path("-two-hours"), $visitor);

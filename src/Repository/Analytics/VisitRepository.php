@@ -4,6 +4,7 @@ namespace Base\Repository\Analytics;
 
 use Base\Entity\Analytics\Visit;
 use Base\Database\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 
 /**
  * @extends ServiceEntityRepository<Visit>
@@ -34,9 +35,21 @@ class VisitRepository extends ServiceEntityRepository
         $hour = $date->setTime((int) $date->format("H"), 0, 0);
 
         $connection->executeStatement(
-            "INSERT IGNORE INTO {$table} (date, subject_type, subject_id) VALUES (:date, :type, :id)",
+            self::insertIgnore($connection, "{$table} (date, subject_type, subject_id) VALUES (:date, :type, :id)"),
             ["date" => $hour->format("Y-m-d H:i:s"), "type" => $subjectType, "id" => mb_substr($subjectId, 0, 64)],
         );
+    }
+
+    /**
+     * "INSERT IGNORE INTO $into" on MySQL/MariaDB; elsewhere (SQLite, the
+     * harness's database, and PostgreSQL) the same through ON CONFLICT DO
+     * NOTHING - one row per unique key, a duplicate silently skipped.
+     */
+    public static function insertIgnore(\Doctrine\DBAL\Connection $connection, string $into): string
+    {
+        return $connection->getDatabasePlatform() instanceof AbstractMySQLPlatform
+            ? "INSERT IGNORE INTO {$into}"
+            : "INSERT INTO {$into} ON CONFLICT DO NOTHING";
     }
 
     /**
