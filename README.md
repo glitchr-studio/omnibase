@@ -7,7 +7,8 @@ structure — a host class can usually extend or decorate its `Base\` counterpar
 one-to-one.
 
 Requires PHP ≥ 8.1 and Symfony 6, 7 or 8. Licensed LGPL-3.0-or-later
-(see `COPYING` / `COPYING.LESSER`).
+(the license in `LICENSE`, also `COPYING.LESSER`; the GNU GPL v3 it
+supplements in `COPYING`).
 
 ## Docker: every plugin, running
 
