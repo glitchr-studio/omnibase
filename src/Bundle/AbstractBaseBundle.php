@@ -252,18 +252,52 @@ abstract class AbstractBaseBundle extends Bundle
         return self::$aliasRepositoryList[$aliasRepository] ?? $aliasRepository;
     }
 
+    /**
+     * The classes the warm-up met but could not load, keyed by class: the
+     * error that stopped them (see classLoads()).
+     */
+    protected static array $unloadable = [];
+
+    public static function getUnloadableClasses(): array
+    {
+        return self::$unloadable;
+    }
+
+    /**
+     * Whether $class can be loaded - false, not fatal, when it cannot.
+     *
+     * The warm-up walks every class of every directory of a bundle, and a
+     * bundle may hold classes for a package it only suggests: a digest source
+     * implementing omnibase/newsletter's interface, an exporter extending a
+     * provider's class. Declaring such a class without that package throws
+     * `Interface "..." not found` (or Class, Trait, Enum), which used to take
+     * the whole kernel down at boot. That class is simply not aliased; nothing
+     * that is registered uses it without its package. Any other error (a parse
+     * error, a broken bundle) still surfaces.
+     */
+    public static function classLoads(string $class): bool
+    {
+        try {
+            return class_exists($class);
+        } catch (ErrorException $e) {
+            return false;
+        } catch (\Error $e) {
+            if (!preg_match('/^(Class|Interface|Trait|Enum) "[^"]+" not found/', $e->getMessage())) {
+                throw $e;
+            }
+
+            self::$unloadable[ltrim($class, "\\")] = $e->getMessage();
+            return false;
+        }
+    }
+
     public function setAlias(array $classes)
     {
         foreach ($classes as $input => $output) {
-            
-            // Autowire base repositories
-            $inputExists = false;
-            try { $inputExists = class_exists($input); }
-            catch (ErrorException $e) { }
 
-            $outputExists = false;
-            try { $outputExists = class_exists($output); }
-            catch (ErrorException $e) { }
+            // Autowire base repositories
+            $inputExists = self::classLoads($input);
+            $outputExists = $inputExists && self::classLoads($output);
 
             // An output that already exists AS AN ALIAS of the input (declared
             // earlier in this process, or by the fallback autoloader below
