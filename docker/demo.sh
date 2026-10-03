@@ -4,7 +4,8 @@
 # check: the container and the templates linted, the plugins' routes counted.
 # console ...: bin/console.
 # test <plugin> [args]: the plugin's PHPUnit suite (vendor/omnibase/<plugin>/phpunit.xml.dist),
-# or this bundle's with no plugin named.
+# or this bundle's with no plugin named, in the test environment (.env.test)
+# on a fresh SQLite database.
 set -e
 cd /srv/demo
 case "${1:-serve}" in
@@ -23,8 +24,16 @@ case "${1:-serve}" in
     test)
         shift
         case "${1:-}" in
-            ""|-*) exec vendor/bin/phpunit -c vendor/glitchr/omnibase/phpunit.xml.dist "$@" ;;
-            *) plugin=$1; shift; exec vendor/bin/phpunit -c "vendor/omnibase/$plugin/phpunit.xml.dist" "$@" ;;
-        esac ;;
+            ""|-*) suite=vendor/glitchr/omnibase ;;
+            *) suite="vendor/omnibase/$1"; shift ;;
+        esac
+        # The test environment (.env then .env.test, see tests/harness.php),
+        # a fresh container and a fresh SQLite database with the schema of
+        # every entity the bundles map.
+        export APP_ENV=test
+        export HARNESS_SUITE_BOOTSTRAP="$suite/tests/bootstrap.php"
+        rm -rf var/cache/test var/test.db
+        php bin/console doctrine:schema:create --env=test --no-interaction --quiet
+        exec vendor/bin/phpunit -c "$suite/phpunit.xml.dist" --bootstrap tests/harness.php "$@" ;;
     *) exec "$@" ;;
 esac

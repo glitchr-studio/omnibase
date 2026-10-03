@@ -59,11 +59,13 @@ ARG PLUGINS="omnibase/admin omnibase/marketplace omnibase/forge omnibase/forum o
 # Translator without being declared by it.
 # The shop pays through glitchr/omnitrade (its Stripe provider here) and
 # ships through glitchr/omnibus (two carriers here): the sibling families,
-# from GitHub until Packagist lists them (plain git over https: GitHub's API
-# is rate-limited for anonymous builds, and its fallback is ssh).
-RUN composer config repositories.omnibase '{"type": "path", "url": "/srv/omnibase", "options": {"symlink": false, "versions": {"glitchr/omnibase": "3.x-dev"}}}' \
-    && composer config repositories.omnitrade '{"type": "git", "url": "https://github.com/glitchr-studio/omnitrade.git"}' \
-    && composer config repositories.omnitrade-stripe '{"type": "git", "url": "https://github.com/glitchr-studio/omnitrade-stripe.git"}' \
+# from Packagist, their development branches - the marketplace follows
+# omnitrade's 1.x (its catalogue: Model\Product, Stock, Registry::options()).
+# A layer cached from an older build keeps an older 1.x: `docker compose
+# build --build-arg OMNI_REFRESH=$(date +%s)` refetches it.
+ARG OMNI_REFRESH=0
+RUN echo "omni families as of ${OMNI_REFRESH}" \
+    && composer config repositories.omnibase '{"type": "path", "url": "/srv/omnibase", "options": {"symlink": false, "versions": {"glitchr/omnibase": "3.x-dev"}}}' \
     && composer require "glitchr/omnibase:3.x-dev as 3.0.x-dev" $(for p in $PLUGINS; do printf '%s:*@dev ' "$p"; done) \
         "glitchr/omnitrade:1.x-dev" "omnitrade/stripe:1.x-dev" "glitchr/omnibus:2.x-dev" "omnibus/offline:2.x-dev" "omnibus/mondial-relay:2.x-dev" \
         omnipay/stripe symfony/translation symfony/messenger --no-interaction --no-progress --no-scripts \

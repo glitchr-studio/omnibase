@@ -20,8 +20,11 @@ cd docker
 docker compose up                                        # → http://localhost:8000/
 docker compose run --rm omnibase check                   # container and templates linted, routes counted
 docker compose -f compose.yml -f compose.checkouts.yml up   # the checkouts beside this one instead of Packagist
-docker compose run --rm test                             # this bundle's test suite
+docker compose -f compose.yml -f compose.checkouts.yml run --rm omnibase test [admin|marketplace|forge|...]   # a suite, on the checkouts
 ```
+
+The suites run there in the test environment on a fresh SQLite database: see
+[docs/30-operations/harness.md](docs/30-operations/harness.md).
 
 ## Installation
 
