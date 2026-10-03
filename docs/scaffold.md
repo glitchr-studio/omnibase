@@ -17,7 +17,7 @@ longer copied because a package provides it.
 
 | Path | Then |
 |---|---|
-| `Makefile` | `APP_NAME`, ports (plan 0 §2: one HTTP/HTTPS pair per site) |
+| `Makefile` | `APP_NAME`, ports (plan 0 §2: one HTTP/HTTPS pair per site); its `docker exec` shortcuts take a TTY only when there is one (see below) |
 | `docker-compose.yml`, `docker-compose.override.yml`, `docker-compose.setup.yml`, `docker-compose.override.setup.yml`, `docker-compose.admin.yml` | the `../omnibase`, `../canva`, `../padlet` mounts only for the path packages the site uses |
 | `deployments/docker/*` (web, proxy, database, assets, composer, cron; `collab` if it co-edits live) | nothing |
 | `.env`, `.env.dev`, `.env.prod`, `.env.test` (`.env.local` is never copied) | `APP_NAME`, `DEFAULT_URI`, the dev ports, `MAILER_CONTACT` |
@@ -78,6 +78,14 @@ bundle, and the rest as they are.
 1. Copy the files of the first part; rename (`APP_NAME`, ports, `composer.json`, `package.json`).
 2. `make install-dev` (composer and yarn in the setup containers, `COMPOSER_ALLOW_SUPERUSER=1`).
 3. `make doctrine-migration`, then `make doctrine-migrate` and `make database-test`.
+   These run from a script or an agent as well as from a terminal: the
+   Makefile's `DOCKER_WEB`, `DOCKER_DATABASE`, `DOCKER_PROXY` and `DOCKER_ASSETS`
+   pass `docker exec` the `TTY_FLAG` (`-ti` when standard input is a terminal,
+   `-i` otherwise), and so do `make shell` / `make shell-debug` given `ARGS`.
+   Apfelschule's `DOCKER_DATABASE` and `DOCKER_PROXY` used a bare `-ti`, and
+   `make database-test` stopped on "the input device is not a TTY" outside a
+   terminal (fixed 2026-10-04): a site copied from an older Makefile changes
+   those two lines the same way.
 4. Write the site's `SettingsSectionInterface` classes for its own settings and keys.
 5. `docker exec <app>-web-1 php vendor/bin/phpunit`: green before the first commit.
 
