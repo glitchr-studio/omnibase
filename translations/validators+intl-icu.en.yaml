@@ -32,3 +32,6 @@ not_blank: "Field \"{label}\" is blank."
 widget_slot:
    name:
       unique: "This widget slot naming is already used"
+
+privacy:
+   consent_required: "Please agree that your information is used to answer you."

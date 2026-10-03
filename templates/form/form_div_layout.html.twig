@@ -1652,3 +1652,21 @@
     {{- block('form_widget_simple') -}}
 </div>
 {%- endblock code_widget %}
+
+{# The data-protection notice under a form, and the box to tick when consent
+   is asked (Base\Form\Type\PrivacyType, ContactType's `privacy` options).
+   The notice is a translation, trusted: printed as HTML so that it may link
+   to the privacy page through its parameters. #}
+{%- block base_privacy_row -%}
+<div class="form-privacy{{ row_attr.class is defined ? ' ' ~ row_attr.class }}">
+    {%- if notice -%}
+    <p class="form-privacy-notice">{{ notice|trans(notice_parameters)|raw }}</p>
+    {%- endif -%}
+    {%- if form.accept is defined -%}
+        {{- form_row(form.accept) -}}
+    {%- endif -%}
+    {{- form_errors(form) -}}
+</div>
+{%- endblock base_privacy_row -%}
+
+{%- block base_privacy_widget -%}{{- block('base_privacy_row') -}}{%- endblock base_privacy_widget -%}

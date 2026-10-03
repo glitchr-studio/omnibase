@@ -42,3 +42,6 @@ not_blank: "Le champ \"{field}\" est vide."
 widget_slot:
    name:
       unique: "Le nom porté par ce widget est déjà utilisé"
+
+privacy:
+   consent_required: "Merci d'accepter que vos informations servent à vous répondre."

@@ -65,6 +65,7 @@ bundle, and the rest as they are.
 | `src/EventSubscriber/NestHeaderSubscriber.php` | omnibase/admin's `NestHeaderSubscriber`: every admin route, and any route with `defaults: ['_nest' => true]` |
 | `src/Controller/Admin/SystemController.php` | omnibase/admin's `SystemController` (`admin_settings`, `admin_apikey`, `admin_settings_quick`); the site's own fields in a class implementing `Base\Admin\Settings\SettingsSectionInterface` |
 | `src/Form/ContactType.php`, `src/Model/ContactMessage.php` | `Base\Form\Type\ContactType` with `['phone' => true, 'subject' => false, 'attachments' => false, 'buttons' => false, 'trap' => true]`, `Base\Form\Model\ContactModel` (`isRobot()`) - created with `createNamed('contact', …)` to keep the field names |
+| A consent checkbox and a data-protection sentence under a form | `ContactType`'s `privacy`, `privacy_consent`, `privacy_parameters` options, or `Base\Form\Type\PrivacyType` in any form ([Pages and texts](40-commons/pages-and-texts.md)) |
 | `src/Twig/ImageExtension.php` | glitchr/omnibase's `\|picture` filter |
 | `src/Entity/TextOverride.php`, `src/Repository/TextOverrideRepository.php`, `src/Translation/OverridingTranslator.php`, `src/Translation/TextOverrideCacheListener.php`, `src/Controller/Admin/Crud/TextOverrideCrudController.php` | `Base\Entity\Layout\TextOverride` (table `layoutTextOverride`), `Base\Translation\*`, omnibase/admin's `TextOverrideCrudController` |
 | `src/Market/DevGateway.php` | omnibase/marketplace's `DevGateway`, registered in debug only |

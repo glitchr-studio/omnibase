@@ -27,6 +27,15 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
  * submit and reset buttons (on), trap - the `website` field robots fill,
  * off-screen for people (off). Labels: the "forms" domain's contact.fields.*,
  * or a label given to form_row().
+ *
+ * The data-protection notice (Base\Form\Type\PrivacyType, a `privacy`
+ * child, not mapped): privacy - true for omnibase's notice
+ * (@forms.privacy.notice), a translation key for the site's own, false for
+ * none (default); privacy_consent - the box to tick, the form invalid until
+ * it is (off); privacy_parameters - the notice's parameters, a link to the
+ * privacy page for instance:
+ *
+ *     ['privacy' => '@messages.contact.privacy', 'privacy_parameters' => ['url' => $url], 'privacy_consent' => true]
  */
 class ContactType extends AbstractType
 {
@@ -44,10 +53,15 @@ class ContactType extends AbstractType
             'attachments' => true,
             'buttons' => true,
             'trap' => false,
+            'privacy' => false,
+            'privacy_consent' => false,
+            'privacy_parameters' => [],
         ]);
-        foreach (['phone', 'subject', 'attachments', 'buttons', 'trap'] as $option) {
+        foreach (['phone', 'subject', 'attachments', 'buttons', 'trap', 'privacy_consent'] as $option) {
             $resolver->setAllowedTypes($option, 'bool');
         }
+        $resolver->setAllowedTypes('privacy', ['bool', 'string']);
+        $resolver->setAllowedTypes('privacy_parameters', 'array');
     }
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
@@ -69,6 +83,14 @@ class ContactType extends AbstractType
             $builder->add('website', TextType::class, ['required' => false, 'label' => false,
                 'row_attr' => ['class' => 'base-trap', 'aria-hidden' => 'true', 'style' => 'position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden'],
                 'attr' => ['tabindex' => '-1', 'autocomplete' => 'off']]);
+        }
+        if ($options['privacy'] || $options['privacy_consent']) {
+            // Before the buttons: read, ticked, then sent.
+            $builder->add('privacy', PrivacyType::class, [
+                'notice' => $options['privacy'],
+                'notice_parameters' => $options['privacy_parameters'],
+                'consent' => $options['privacy_consent'],
+            ]);
         }
         if ($options['buttons']) {
             $builder->add('submit', SubmitType::class, ["confirmation" => true]);

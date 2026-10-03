@@ -132,3 +132,9 @@ comment:
         too_fast: "A little fast! Read your message again and send it."
         flood: "You have just written: wait a minute before the next message."
         reply_signed_in: "Answering a message takes an account."
+
+# The data-protection notice under a form that collects personal data, and
+# the box to tick when consent is asked (Base\Form\Type\PrivacyType).
+privacy:
+    notice: "The information you send is used only to answer you, and is passed on to no one. You may ask at any time for it to be corrected or deleted."
+    consent: "I agree that this information is used to answer me."

@@ -18,7 +18,7 @@ An application or an `omnibase/*` bundle uses these; it does not keep a copy.
 | EU allergens | `Base\Enum\Allergen` | [Allergens](allergens.md) |
 | Comments | `Base\Entity\Thread\Comment`, `CommentGuard`, `CommentType` | [Comments](comments.md) |
 | Framing an address | Twig `embed_url()` | [Pages and texts](pages-and-texts.md) |
-| Contact form | `Base\Form\Type\ContactType`, `ContactModel` | [Pages and texts](pages-and-texts.md) |
+| Contact form, data-protection notice and consent box | `Base\Form\Type\ContactType`, `ContactModel`, `PrivacyType` | [Pages and texts](pages-and-texts.md) |
 | Pictures, texts rewritten in the back office | Twig `picture`, `Base\Entity\Layout\TextOverride` | [Pages and texts](pages-and-texts.md) |
 | Glitch Art's signature | `@Base/partials/_credits.html.twig` | [Front end](front-end.md) |
 | `Base.boot()`, Stimulus `poll` | `assets/boot.js`, `assets/controllers/poll_controller.js` | [Front end](front-end.md) |

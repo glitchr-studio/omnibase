@@ -133,3 +133,10 @@ comment:
         too_fast: "Un peu vite ! Relisez votre message et renvoyez-le."
         flood: "Vous venez d'écrire : attendez une minute avant le prochain message."
         reply_signed_in: "Répondre à un message demande un compte."
+
+# La mention de protection des données sous un formulaire qui recueille des
+# données personnelles, et la case à cocher quand le consentement est demandé
+# (Base\Form\Type\PrivacyType).
+privacy:
+    notice: "Les informations transmises servent uniquement à vous répondre et ne sont communiquées à personne. Vous pouvez à tout moment en demander la rectification ou la suppression."
+    consent: "J'accepte que ces informations servent à me répondre."
