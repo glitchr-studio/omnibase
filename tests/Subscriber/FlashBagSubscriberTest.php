@@ -68,6 +68,9 @@ class FlashBagSubscriberTest extends TestCase
         $flashBag = $session->getFlashBag();
         $flashBag->add('success', 'Saved.');
         $request->setSession($session);
+        // A returning visitor: the subscriber reads only a session the
+        // request came back with (Request::hasPreviousSession()).
+        $request->cookies->set($session->getName(), 'returning');
 
         $response = new JsonResponse(['response' => 'ok']);
 
@@ -85,6 +88,7 @@ class FlashBagSubscriberTest extends TestCase
         $session->getBag('flashes');
         $session->getFlashBag()->add('info', 'Heads up.');
         $request->setSession($session);
+        $request->cookies->set($session->getName(), 'returning');
 
         $response = new JsonResponse('a bare string payload');
 
@@ -93,5 +97,40 @@ class FlashBagSubscriberTest extends TestCase
         $data = json_decode($response->getContent(), true);
         $this->assertSame('a bare string payload', $data['response']);
         $this->assertSame(['info' => ['Heads up.']], $data['flashbag']);
+    }
+
+    public function testNoSessionCookieMeansNoFlashesRead(): void
+    {
+        // Without a session the request came back with, reading the flashes
+        // would start one for every API call.
+        $request = Request::create('/');
+        $session = new Session(new MockArraySessionStorage());
+        $session->getFlashBag()->add('success', 'Saved.');
+        $request->setSession($session);
+
+        $response = new JsonResponse(['response' => 'ok']);
+
+        (new FlashBagSubscriber())->onKernelResponse($this->makeEvent($request, $response));
+
+        $this->assertSame(['response' => 'ok'], json_decode($response->getContent(), true));
+        $this->assertSame(['success' => ['Saved.']], $session->getFlashBag()->peekAll());
+    }
+
+    public function testAPubliclyCacheableResponseNeverCarriesFlashes(): void
+    {
+        // A shared cache would keep one member's flash and hand it to others.
+        $request = Request::create('/');
+        $session = new Session(new MockArraySessionStorage());
+        $session->getFlashBag()->add('success', 'Bravo.');
+        $request->setSession($session);
+        $request->cookies->set($session->getName(), 'returning');
+
+        $response = new JsonResponse(['response' => 'ok']);
+        $response->setPublic();
+
+        (new FlashBagSubscriber())->onKernelResponse($this->makeEvent($request, $response));
+
+        $this->assertSame(['response' => 'ok'], json_decode($response->getContent(), true));
+        $this->assertSame(['success' => ['Bravo.']], $session->getFlashBag()->peekAll());
     }
 }
