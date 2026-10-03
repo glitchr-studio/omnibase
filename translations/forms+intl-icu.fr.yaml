@@ -121,3 +121,15 @@ passkey:
     unsupportedBrowser: "Ce navigateur ne prend pas en charge les clés d'accès."
     serverError: "Le serveur a refusé l'opération : {reason}"
     generic: "La clé d'accès n'a pas pu être utilisée ({reason})."
+
+# Base\Form\Type\CommentType and Base\Service\CommentGuard.
+comment:
+    fields:
+        name: "Votre nom ou pseudo"
+        email: "E-mail (facultatif, jamais affiché)"
+        content: "Votre message…"
+    error:
+        trapped: "Merci !"
+        too_fast: "Un peu vite ! Relisez votre message et renvoyez-le."
+        flood: "Vous venez d'écrire : attendez une minute avant le prochain message."
+        reply_signed_in: "Répondre à un message demande un compte."

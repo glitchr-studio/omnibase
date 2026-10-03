@@ -1,0 +1,44 @@
+{#
+ # QR codes to print (Base\Service\Qr\QrSheet::render()): one per A4 page, or
+ # a sheet of Avery labels. Positions in millimetres; print at 100 %.
+ #}
+<!DOCTYPE html>
+<html lang="{{ app.request.locale|default('fr')|slice(0, 2) }}">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title|default('QR') }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <style>
+        @page { size: A4; margin: 0; }
+        * { box-sizing: border-box; }
+        body { margin: 0; background: #e9e9e9; font-family: system-ui, sans-serif; color: #111; }
+        .qr-page { position: relative; width: 210mm; height: 297mm; margin: 1rem auto; background: #fff; overflow: hidden; page-break-after: always; break-after: page; }
+        .qr-page:last-child { page-break-after: auto; break-after: auto; }
+        .qr-label { position: absolute; width: {{ grid.width }}mm; height: {{ grid.height }}mm; display: flex; align-items: center; gap: 2mm; padding: 2mm; overflow: hidden; }
+        .qr-label img { height: 100%; aspect-ratio: 1; flex: none; }
+        .qr-label span { font-size: 9pt; line-height: 1.2; overflow-wrap: anywhere; }
+        .qr-square .qr-label { flex-direction: column; justify-content: center; gap: 1mm; }
+        .qr-square .qr-label img { height: auto; width: 80%; }
+        .qr-square .qr-label span { font-size: 7pt; text-align: center; }
+        .qr-a4 .qr-label { flex-direction: column; justify-content: center; gap: 10mm; padding: 25mm; }
+        .qr-a4 .qr-label img { height: auto; width: 140mm; }
+        .qr-a4 .qr-label span { font-size: 22pt; text-align: center; }
+        .qr-print { position: fixed; right: 1rem; top: 1rem; padding: .6rem 1.2rem; border: 0; border-radius: 999px; background: #111; color: #fff; font: 600 1rem system-ui, sans-serif; cursor: pointer; }
+        @media print { body { background: #fff; } .qr-page { margin: 0; } .qr-print { display: none; } }
+    </style>
+</head>
+<body class="qr-{{ layout == 'a4' ? 'a4' : (grid.width == grid.height ? 'square' : 'labels') }}">
+    <button class="qr-print" type="button" onclick="window.print()">⎙</button>
+    {% for page in pages %}
+    <section class="qr-page">
+        {% for item in page %}
+        <div class="qr-label" style="left: {{ item.x }}mm; top: {{ item.y }}mm">
+            <img src="{{ item.qr }}" alt="">
+            {% if item.label %}<span>{{ item.label }}</span>{% endif %}
+        </div>
+        {% endfor %}
+    </section>
+    {% endfor %}
+</body>
+</html>

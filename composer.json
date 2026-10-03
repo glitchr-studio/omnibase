@@ -40,6 +40,7 @@
         "doctrine/orm": "^2.15|^3.0",
         "symfony/asset": "^6.0|^7.0|^8.0",
         "symfony/expression-language": "^6.0|^7.0|^8.0",
+        "embed/embed": "^4.4",
         "endroid/qr-code": "^6.0",
         "enshrined/svg-sanitize": "^0.22",
         "florianv/swap": "^4.0",

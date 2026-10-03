@@ -120,3 +120,15 @@ passkey:
     unsupportedBrowser: "This browser does not support passkeys."
     serverError: "The server refused the operation: {reason}"
     generic: "The passkey could not be used ({reason})."
+
+# Base\Form\Type\CommentType and Base\Service\CommentGuard.
+comment:
+    fields:
+        name: "Your name or nickname"
+        email: "E-mail (optional, never shown)"
+        content: "Your message…"
+    error:
+        trapped: "Thank you!"
+        too_fast: "A little fast! Read your message again and send it."
+        flood: "You have just written: wait a minute before the next message."
+        reply_signed_in: "Answering a message takes an account."

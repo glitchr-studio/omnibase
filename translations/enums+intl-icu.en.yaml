@@ -233,3 +233,19 @@ quadrant16:
 quadrant32:
   _singular: "32-wind quadrant"
   _plural: "32-wind quadrants"
+# Base\Enum\Allergen: the fourteen allergens of Regulation (EU) No 1169/2011, Annex II.
+allergen:
+  gluten: "Cereals containing gluten"
+  crustaceans: "Crustaceans"
+  eggs: "Eggs"
+  fish: "Fish"
+  peanuts: "Peanuts"
+  soybeans: "Soybeans"
+  milk: "Milk"
+  nuts: "Nuts"
+  celery: "Celery"
+  mustard: "Mustard"
+  sesame: "Sesame seeds"
+  sulphites: "Sulphur dioxide and sulphites"
+  lupin: "Lupin"
+  molluscs: "Molluscs"

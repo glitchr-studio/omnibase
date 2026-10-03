@@ -232,3 +232,20 @@ quadrant16:
 quadrant32:
   _singular: "cadran 32-point"
   _plural: "cadrans 32-points"
+
+# Base\Enum\Allergen: the fourteen allergens of Regulation (EU) No 1169/2011, Annex II.
+allergen:
+  gluten: "Céréales contenant du gluten"
+  crustaceans: "Crustacés"
+  eggs: "Œufs"
+  fish: "Poissons"
+  peanuts: "Arachides"
+  soybeans: "Soja"
+  milk: "Lait"
+  nuts: "Fruits à coque"
+  celery: "Céleri"
+  mustard: "Moutarde"
+  sesame: "Graines de sésame"
+  sulphites: "Anhydride sulfureux et sulfites"
+  lupin: "Lupin"
+  molluscs: "Mollusques"

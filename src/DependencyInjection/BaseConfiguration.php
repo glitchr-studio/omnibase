@@ -665,6 +665,28 @@ class BaseConfiguration extends AbstractBaseConfiguration
                 ->end()
             ->end()
 
+            // The shared bricks (docs/40-commons): opening hours, comments, signed downloads.
+            ->arrayNode('opening_hours')->addDefaultsIfNotSet()
+                ->children()
+                    ->scalarNode('timezone')->defaultValue('Europe/Paris')->info('The timezone the hours are given in.')->end()
+                    ->scalarNode('cutoff')->defaultNull()->info('"HH:MM": past it, orderDay() is the next open day. Null: the day itself until it closes.')->end()
+                    ->variableNode('week')->defaultValue([])->info('The usual week until one is saved (hoursWeekDay): ISO day (1 = Monday) => [["09:00", "13:00"], ...].')->end()
+                ->end()
+            ->end()
+
+            ->arrayNode('comments')->addDefaultsIfNotSet()
+                ->children()
+                    ->integerNode('min_delay')->min(0)->defaultValue(4)->info('Seconds between a comment form being opened and sent: faster is a robot.')->end()
+                    ->integerNode('flood_interval')->min(0)->defaultValue(60)->info('Seconds between two comments from the same address.')->end()
+                ->end()
+            ->end()
+
+            ->arrayNode('download_links')->addDefaultsIfNotSet()
+                ->children()
+                    ->integerNode('ttl')->min(1)->defaultValue(600)->info('Seconds a signed download link stays valid.')->end()
+                ->end()
+            ->end()
+
             ->arrayNode('extension')->addDefaultsIfNotSet()
                 ->children()
                 ->scalarNode('max_revisions')

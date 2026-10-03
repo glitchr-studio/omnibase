@@ -364,6 +364,9 @@ class BaseBundle extends AbstractBaseBundle
 
             foreach ($classList as $className) {
 
+                // A plain PHP enum (Base\Enum\Allergen, CommentState) is no Doctrine type.
+                if (!method_exists($className, "getStaticName")) continue;
+
                 if(!Type::hasType($className::getStaticName())) {
                     Type::addType($className::getStaticName(), $className);
                 }
