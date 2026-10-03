@@ -30,6 +30,8 @@ Encore.addPlugin(new WebpackBar())
 
     .copyFiles({from: './assets/styles/images/flags/', to: 'images/flags/[path][name].[ext]', pattern: /\.svg$/})
     .copyFiles({from: './assets/styles/fonts', to: 'fonts/[path][name].[ext]'})
+    // Plain stylesheets linked by the bundle's own partials (credits.css: @Base/partials/_credits.html.twig).
+    .copyFiles({from: './assets/styles/credits', to: 'css/[name].[ext]'})
     .copyFiles({from: './assets/styles/images/bundles/', to: 'images/bundles/[path][name].[ext]'})
     .copyFiles({from: './assets/styles/images/', to: 'images/[path][name].[ext]', pattern: /\.(svg|webp|jpg|png|gif)$/})
 

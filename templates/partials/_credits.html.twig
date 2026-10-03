@@ -1,0 +1,94 @@
+{#
+ # Glitch Art's signature, the same on every site: the year on two lines beside
+ # the pixel monkey (it dances on hover), in Source Code Pro bold 18pt/21px,
+ # linking to https://www.glitchr.io - LaToucheOriginale's credits_glitchr macro.
+ # Its stylesheet: bundles/base/css/credits.css (linked here).
+ #
+ #   {% include '@Base/partials/_credits.html.twig' with {color: 'white', outline: true} %}
+ #
+ # Parameters - nothing else is customisable, neither the font nor a site colour:
+ #   color    'black' (default) or 'white': the text and the monkey; grey on hover
+ #   outline  true: a white contour around the text and the monkey, for a photo or a busy background
+ #   mirror   true: the detail line on the right of the signature instead of the left
+ #   rule     true: a dotted rule between the detail's two lines
+ #   detail   false: no detail line at all
+ #   site_name the detail's second line (none by default)
+ #
+ # The detail line beside it (the address, the time the page took, and the
+ # site's name) is hidden until the signature is pointed at or focused, always
+ # shown without a pointer (@media (hover: none)). An app fills it with embed:
+ #
+ #   {% embed '@Base/partials/_credits.html.twig' %}
+ #       {% block credits_detail %}{{ parent() }}<span class="ga-credits-line" lang="de">Ein Apfel am Tag</span>{% endblock %}
+ #   {% endembed %}
+ #}
+{%- set year = 'now'|date('Y') -%}
+{%- set color = (color|default('black')) == 'white' ? 'white' : 'black' -%}
+<link rel="stylesheet" href="{{ asset('bundles/base/css/credits.css') }}">
+<div class="ga-credits ga-credits--{{ color }}{{ outline|default(false) ? ' ga-credits--outline' }}{{ mirror|default(false) ? ' ga-credits--mirror' }}{{ rule|default(false) ? ' ga-credits--rule' }}">
+    {%- if detail|default(true) %}
+    <p class="ga-credits-detail">
+        {%- block credits_detail -%}
+        <span class="ga-credits-line">{{ app.request.httpHost|default('')|upper }} <span class="ga-credits-time">[{{ app.site.execution_time|default(0)|number_format(2) }}s]</span></span>
+        {%- if site_name|default(null) %}<span class="ga-credits-line">{{ site_name }}</span>{% endif -%}
+        {%- endblock -%}
+    </p>
+    {%- endif %}
+    <a class="ga-credits-sign" href="https://www.glitchr.io" target="_blank" rel="noopener" aria-label="{{ year }} Glitch Art">
+        <span class="ga-credits-year" aria-hidden="true"><span>{{ year|slice(0, 2) }}</span><span>{{ year|slice(2, 2) }}</span></span>
+<svg class="ga-credits-monkey" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">
+        <g class="hair init" stroke="none">
+            <path d="M0,216.56V173.25H14.49V158.78H29v-14.3H72.22v14.41H86.69v14.39h14.2v14.47H86.58v14.47H72.31v14.19h28.85V202h14.39V187.57h14.26V158.75H101V144.29H86.77V57.65h14.37V43.26h14.33V28.84H130V14.61H245.52V28.93h14.41V43.34c-8.72,0-17.44,0-26.15-.16-2.22,0-3.05.47-2.92,2.84.21,3.79.06,7.61.06,11.44H216.51v-14H187.62V57.93H158.88c0,8.9-.07,17.47.05,26,0,2.17-.56,2.88-2.76,2.78-3.8-.17-7.62,0-11.52,0v28.74H159v43.31h9.05c5.26,0,5.26,0,5.26,5.36v9.08c4.24,0,8.07.09,11.9,0,1.91-.07,2.72.42,2.58,2.49-.17,2.54,0,5.1,0,7.66v4.24h3.38l83.22.13v14.56h14.47v14.37h28.65v57.77H303.17c0-.9-.12-1.8-.12-2.69q0-19,.06-38.1c0-.79,0-1.59,0-2.34H274.35v43.14a5.08,5.08,0,0,0-.67-.07l-55.9.17a5.92,5.92,0,0,0-.94.17V303h54.84c.89,0,1.79.08,2.69.12v14.32H144.31c0-4.85,0-9.57,0-14.29.89-.05,1.79-.15,2.68-.15h54.89V274.58a2.42,2.42,0,0,0-.56-.17q-21.63,0-43.27,0c-4.57,0-9.15-.12-13.73-.18V245.42H129.8V231.16H101.36v43h43q0,14.54,0,29.07H129.82V288.65H86.57V274.2H57.68V259.83H28.78V245.37H14.4V216.56Zm245.26,43.15V230.86H230.94V216.77H187.76c0,3.6,0,7,0,10.34,0,4.51.56,3.91-4,3.95-3.42,0-6.85,0-10.31,0v28.65Zm-143.95-130h28.46V86.89H101.31Z" />
+            <path d="M115.53,28.91H86.8V14.53h14.26V0H115.5Z" />
+            <path d="M274.35,86.65h-14.5V43.27h14.5Z" />
+            <path d="M303.16,158.84V115.46h14.31v43.38Z" />
+            <path d="M274.28,274.28h29v14.37H288.82v14.57H274.29Q274.27,288.75,274.28,274.28Z" />
+            <path d="M288.79,101.09H274.28V86.59h14.51Z" />
+            <path d="M303.23,115.53H288.72V101h14.51Z" />
+            <path d="M288.72,173.28v-14.5h14.51v14.5Z" />
+            <path d="M274.28,187.72V173.21h14.51v14.51Z" />
+            <path d="M187.68,144.38c.89,0,1.79-.08,2.69-.08q40.63,0,81.28,0c.9,0,1.79.06,2.69.09l0,0v14.39H187.72V144.34Z" />
+            <path d="M187.76,72.2H202V101H187.76Z" />
+            <path d="M231.08,72.21h14.24V101H231.08Z" />
+            <path d="M216.64,115.51h28.68v14.37H216.64Z" />
+            <path d="M187.72,144.34H173.25V130h14.43v14.35Z" />
+            <path d="M274.34,144.39V130h14.37v14.3H274.3Z" />
+            <path d="M216.49,245.46H202.14V231.11h14.35Z" />
+        </g>
+
+        <g class="hair frame1" stroke="none">
+            <path d="M303,115.52l14.46,0v86.62H303l0,0c0-4.86-.1-9.72-.12-14.59,0-4.69,0-9.38,0-14.28H288.55V158.69H303c0-1.83,0-3.4,0-5q0-19.12.1-38.26Z" />
+            <path d="M115.33,0q0,14.46,0,28.91H86.63V14.53H100.9V0Z" />
+            <path d="M115.3,28.84h14.42V14.56H245.2v14.2h14.5V43.33l.05,0c-8.71,0-17.43,0-26.14-.1-2.24,0-3,.5-2.9,2.85.2,3.79,0,7.61,0,11.43H216.34v-14H187.46V57.93H158.72c0,8.9-.07,17.47.05,26,0,2.17-.56,2.88-2.76,2.78-3.8-.17-7.62,0-11.52,0v28.74h14.35v43.08a7.31,7.31,0,0,0,.92.2l8.57,0c4.83,0,4.83,0,4.83,4.9v9.54c2.8,0,5.2,0,7.6,0,2.16,0,5.24-.65,6.24.48,1.15,1.3.53,4.23.59,6.45.06,2.44,0,4.88,0,7.51h86.59V202c2.75,0,5.14,0,7.52,0l21.36.17,0,0v14.41H288.72v43.24h14.16v29H288.66v14.53H274.18q0-7.32-.05-14.63,0-7,0-14.09H216.7V303h54.86c.89,0,1.79.08,2.69.13v14.3H144.15V303.2c.9-.05,1.79-.15,2.69-.15h54.92V274.51H144.3c0,1.17,0,2.13,0,3.09q0,12.84-.08,25.67H115.37V288.81H86.54V274.34H57.62v-14.4H28.79V245.55H14.32v-28.9H0V173.3H14.19V158.91H28.66V144.49H71.93v14.29H86.4v14.31h43.24V158.86H101V144.47H86.64V57.82h14.17V43.42H115.3Zm28.91,158.94H101.1v43.06h28.64V216.39h14.4V187.7h14.25V173.48H144.21ZM173.3,259.7h71.84V230.94H230.78v-14.2H187.6c0,4-.13,7.82.05,11.63.1,2.21-.63,2.84-2.79,2.75-3.8-.17-7.62-.05-11.56-.05Zm-72.17-130h28.49V86.88H101.13ZM86.3,216.46V202.3H72.13v14.16Z" />
+            <path d="M259.7,43.33h14.44V86.64l.05,0H259.65V82.22q0-19.47.1-38.94Z" />
+            <path d="M274.14,86.64h14.44v14.44l.05,0H274.19V86.6Z" />
+            <path d="M288.58,101.08H303v14.44l.05,0H288.63V101Z" />
+            <path d="M274.15,144.35v14.39H187.56v-14.4l0,0c.89,0,1.79-.09,2.69-.09H271.5c.89,0,1.79.06,2.69.09Z" />
+            <path d="M201.89,101H187.64V72.25h14.25Z" />
+            <path d="M230.92,72.21h14.25V101H230.92Z" />
+            <path d="M216.42,129.87V115.61h28.81v14.26Z" />
+            <path d="M187.56,144.34H173.09V130h14.43v14.35Z" />
+            <path d="M274.19,144.39V130.05h14.37v14.3H274.15Z" />
+            <path d="M288.64,173.22v14.5H274.13v-14.5Z" />
+            <path d="M201.94,245.43V231.07H216.3v14.36Z" />
+        </g>
+
+        <g class="hair frame2" stroke="none" >
+            <path d="M0,216.56V173.25H14.48V158.79H28.94V144.55H72.26v14.11H86.7v-101h14.44V43.25h14.32V28.84H130V14.61H245.51V28.93h14.4V43.34c-7.36,0-14.72-.1-22.07-.09-2.23,0-5.15-.58-6.46.57-1.12,1-.42,4.07-.46,6.23,0,2.46,0,4.91,0,7.42H216.63c0-4.16-.07-8.14,0-12.11,0-1.7-.53-2.18-2.19-2.16-8.34.12-16.68.13-25,.2a14.31,14.31,0,0,0-1.81.25V57.87H158.88v3c0,7.44,0,14.88,0,22.32,0,3.88.38,3.48-3.5,3.5-3.57,0-7.15,0-10.77,0v28.73h14.22v14.7H144.44c0,5,0,9.61,0,14.26H101.29V187.5H130V173.08h14.39V144.3H159v14.44c4.2,0,8.1.06,12,0,1.7,0,2.51.4,2.34,2.25-.14,1.57,0,3.16,0,4.74v7.47c4.18,0,7.94.12,11.69,0,2.14-.1,2.9.51,2.8,2.74-.18,3.8-.05,7.61-.05,11.58h86.57V173.22h14.47V187.8h28.69v57.69H303.19c-.06-.89-.16-1.79-.16-2.68q0-19,.07-38.08v-2.32H274.51v42.87h2.85l25.9.15v43.43H288.64v14.38H274.32c0-4.87-.05-9.75-.06-14.62,0-4.7,0-9.41,0-14.1H216.84V303h54.85c.9,0,1.8.09,2.69.13v14.31H144.31V303.19c.89-.05,1.79-.15,2.68-.15h54.92V274.5H144.46v3.09l-.09,25.67h-29v-14.6H86.57V274.2H57.67V259.83H28.78V245.37H14.4V216.56Zm188.07.11a4.41,4.41,0,0,0-.27.91c0,2.55-.05,5.11-.05,7.66,0,5.82,0,5.82-5.71,5.82h-8.51v28.62h71.74V230.9H231V216.67Zm-58.32-87V86.82H101.4v42.87ZM86.58,230.84h28.74V216.48H101V202.27H72.36v14.36H86.58Z" />
+            <path d="M115.53,28.91H86.8V14.53h14.26V0h14.43Q115.52,14.46,115.53,28.91Z" />
+            <path d="M274.34,86.65H259.83V43.27h14.51Z" />
+            <path d="M303.14,158.84V115.46h14.32v43.38Z" />
+            <path d="M288.77,101.09h-14.5V86.59h14.5Z" />
+            <path d="M303.21,115.53h-14.5V101h14.5Z" />
+            <path d="M288.71,173.28v-14.5h14.5v14.5Z" />
+            <path d="M187.67,144.38c.9,0,1.79-.08,2.69-.08q40.63,0,81.27,0c.9,0,1.8.06,2.7.09l-.05,0v14.39H187.7V144.34Z" />
+            <path d="M187.68,101V72.29H202V101Z" />
+            <path d="M245.35,101H231.11V72.25h14.24Z" />
+            <path d="M216.57,129.86V115.61h28.8v14.25Z" />
+            <path d="M187.7,144.34H173.24V130h14.43v14.35Z" />
+            <path d="M274.33,144.39V130h14.36v14.3H274.28Z" />
+            <path d="M202.11,231H216.5V245.4H202.11Z" />
+        </g>
+    </svg>
+    </a>
+</div>

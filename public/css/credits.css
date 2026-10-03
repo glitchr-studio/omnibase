@@ -1,0 +1,84 @@
+/*
+ * Glitch Art's signature (@Base/partials/_credits.html.twig), the same on every
+ * site: Source Code Pro bold, 18pt on 21px lines, the year on two lines beside
+ * the 42px pixel monkey that dances on hover; black or white, grey on hover.
+ * Copied to bundles/base/css/credits.css (webpack.config.js, from assets/styles/credits/).
+ */
+@font-face {
+    font-family: "Source Code Pro";
+    font-weight: bold;
+    font-display: swap;
+    src: url("../fonts/Source Code Pro.woff2") format("woff2");
+}
+
+.ga-credits {
+    --ga-credits-ink: #000;
+    --ga-credits-hover: grey;
+    --ga-credits-halo: transparent;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: .75rem;
+    color: var(--ga-credits-ink);
+    font-family: "Source Code Pro", ui-monospace, monospace;
+    font-weight: bold;
+}
+.ga-credits--white { --ga-credits-ink: #fff; }
+.ga-credits--mirror { flex-direction: row-reverse; justify-content: flex-end; }
+
+.ga-credits-sign {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    height: 42px;
+    font-size: 18pt;
+    line-height: 21px;
+    color: var(--ga-credits-ink) !important;
+    text-decoration: none !important;
+}
+.ga-credits-sign:hover, .ga-credits-sign:focus-visible { color: var(--ga-credits-hover) !important; }
+.ga-credits-year { display: flex; flex-direction: column; justify-content: center; align-items: center; max-width: 42px; }
+.ga-credits-monkey { width: 42px; height: 42px; flex: none; }
+.ga-credits-monkey .hair { fill: var(--ga-credits-ink); }
+.ga-credits-sign:hover .ga-credits-monkey .hair, .ga-credits-sign:focus-visible .ga-credits-monkey .hair { fill: var(--ga-credits-hover); }
+.ga-credits-monkey .init { visibility: visible; }
+.ga-credits-monkey .frame1, .ga-credits-monkey .frame2 { visibility: hidden; }
+.ga-credits-sign:hover .init { visibility: hidden; }
+.ga-credits-sign:hover .frame1 { animation: ga-credits-dance .25s infinite; }
+.ga-credits-sign:hover .frame2 { animation: ga-credits-dance .25s .125s infinite; }
+@keyframes ga-credits-dance { 0% { visibility: visible; } 50% { visibility: hidden; } }
+
+/* The detail beside it: shown while the signature is pointed at or focused. */
+.ga-credits-detail {
+    margin: 0;
+    font-size: 9pt;
+    line-height: 1.5;
+    text-align: right;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity .25s ease;
+}
+.ga-credits--mirror .ga-credits-detail { text-align: left; }
+.ga-credits:hover .ga-credits-detail, .ga-credits:focus-within .ga-credits-detail { opacity: 1; }
+.ga-credits-line { display: block; }
+.ga-credits-time { opacity: .6; font-weight: normal; }
+.ga-credits--rule .ga-credits-line + .ga-credits-line { margin-top: .15rem; padding-top: .15rem; border-top: 1px dotted currentColor; }
+
+/* No pointer to hover with (a phone, a tablet): always shown. */
+@media (hover: none) {
+    .ga-credits-detail { opacity: 1; }
+}
+
+/* A white contour, for a photo or a busy background. */
+.ga-credits--outline .ga-credits-sign, .ga-credits--outline .ga-credits-detail {
+    text-shadow: 1px 0 0 #fff, -1px 0 0 #fff, 0 1px 0 #fff, 0 -1px 0 #fff, 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff;
+}
+.ga-credits--outline .ga-credits-monkey {
+    filter: drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ga-credits-detail { transition: none; }
+    .ga-credits-sign:hover .frame1, .ga-credits-sign:hover .frame2 { animation: none; }
+    .ga-credits-sign:hover .init { visibility: visible; }
+}
