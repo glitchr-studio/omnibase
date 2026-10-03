@@ -34,3 +34,15 @@ package is there), so nothing misses it. Any other error while loading a class
 error rethrown); `AbstractBaseBundle::getUnloadableClasses()` lists what the
 warm-up passed by in this process, with the reason - the first place to look
 when an alias is missing.
+
+## Rebuilding an entity's previous state
+
+The attributes that act on a change (`#[Uploader]` above all) compare an entity
+with its state before the change: `AbstractAttribute::getOldEntity()` rebuilds
+it, without its constructor, from Doctrine's original data through
+`object_hydrate()`. Doctrine keeps an enum field there as its backing value
+(`"draft"`, not `Status::Draft`); `object_hydrate()` turns it back into the
+case (`BackedEnum::tryFrom()`, or the case of that name for a pure enum)
+whenever the property is typed with an enum, and leaves the property out when
+no case matches. `property_enum_value(ReflectionProperty, $value)` is that
+conversion, for any other code that fills typed properties by reflection.

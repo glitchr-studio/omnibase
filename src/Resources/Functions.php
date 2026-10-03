@@ -4049,6 +4049,17 @@ namespace {
                     continue;
                 }
 
+                // Doctrine keeps an enum field's original data as its backing
+                // value ("draft", not Status::Draft): the snapshot
+                // AbstractAttribute::getOldEntity() rebuilds from it - for
+                // every entity carrying an #[Uploader] - put that string into
+                // an enum-typed property, a TypeError. A value no case
+                // matches is left out of the snapshot rather than fatal.
+                $value = property_enum_value($reflProperty, $value);
+                if ($value === null) {
+                    continue;
+                }
+
                 $reflProperty->setAccessible(true);
                 $reflProperty->setValue($object, $value);
             }
@@ -4056,6 +4067,69 @@ namespace {
         } while ($reflClass = $reflClass->getParentClass());
 
         return $object;
+    }
+
+    /**
+     * $value as the property can hold it when its type is an enum: a backing
+     * value (int or string) becomes BackedEnum::tryFrom($value), a case name
+     * becomes that case of a pure enum. Null when the property only takes an
+     * enum and no case matches. Any other value, or a property whose type
+     * accepts the value as it is (string, mixed, untyped), is returned
+     * unchanged.
+     */
+    function property_enum_value(ReflectionProperty $reflProperty, mixed $value): mixed
+    {
+        if (!is_int($value) && !is_string($value)) {
+            return $value;
+        }
+
+        $type = $reflProperty->getType();
+        $types = match (true) {
+            $type instanceof ReflectionNamedType => [$type],
+            $type instanceof ReflectionUnionType => $type->getTypes(),
+            default => [],
+        };
+
+        $enums = [];
+        foreach ($types as $namedType) {
+            if (!$namedType instanceof ReflectionNamedType) {
+                return $value; // an intersection inside a union: leave it to PHP
+            }
+
+            $name = $namedType->getName();
+            if ($namedType->isBuiltin()) {
+                if (in_array($name, ["mixed", get_debug_type($value)], true)) {
+                    return $value;
+                }
+                continue;
+            }
+
+            if (enum_exists($name)) {
+                $enums[] = $name;
+            }
+        }
+
+        if (!$enums) {
+            return $value;
+        }
+
+        foreach ($enums as $enum) {
+            if (is_subclass_of($enum, BackedEnum::class)) {
+                $backing = (string) (new ReflectionEnum($enum))->getBackingType();
+                if ($backing === "int" && is_string($value) && !preg_match('/^-?\d+$/', $value)) {
+                    continue;
+                }
+
+                $case = $enum::tryFrom($backing === "int" ? (int) $value : (string) $value);
+                if ($case !== null) {
+                    return $case;
+                }
+            } elseif (is_string($value) && defined($enum . "::" . $value) && constant($enum . "::" . $value) instanceof $enum) {
+                return constant($enum . "::" . $value);
+            }
+        }
+
+        return null;
     }
 
     /**
