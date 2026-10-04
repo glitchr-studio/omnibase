@@ -42,7 +42,7 @@ class Group implements IconizeInterface
 
     public static function __iconizeStatic(): ?array
     {
-        return ["fa-solid fa-users"];
+        return [self::DEFAULT_ICON];
     }
 
     public function __construct()
@@ -395,8 +395,14 @@ class Group implements IconizeInterface
         return $this;
     }
 
+    /** The icon a group gets until it is given one: the column is NOT NULL. */
+    public const DEFAULT_ICON = "fa-solid fa-users";
+
+    // The default is the property's, not the column's: a `new Group()` is
+    // persisted as it is (the column had none, and the insert failed), and no
+    // schema changes.
     #[ORM\Column(type:"string", length:255)]
-    protected $icon;
+    protected $icon = self::DEFAULT_ICON;
 
     public function getIcon(): ?string
     {
@@ -405,7 +411,7 @@ class Group implements IconizeInterface
 
     public function setIcon(?string $icon): self
     {
-        $this->icon = $icon;
+        $this->icon = null === $icon || '' === trim($icon) ? self::DEFAULT_ICON : $icon;
 
         return $this;
     }
