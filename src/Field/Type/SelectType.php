@@ -5,6 +5,7 @@ namespace Base\Field\Type;
 use Base\Admin\Controller\AbstractCrudController;
 use Base\Database\Mapping\ClassMetadataManipulator;
 use Base\Enum\UserRole;
+use Base\Database\Repository\ServiceEntityRepository;
 use Base\Form\FormFactory;
 use Base\Service\LocalizerInterface;
 use Base\Service\MediaServiceInterface;
@@ -257,6 +258,47 @@ class SelectType extends AbstractType implements DataMapperInterface
         });
     }
 
+    /**
+     * The entities of these identifiers. omnibase's repositories answer
+     * cacheById(); a plain Doctrine repository (ServiceEntityRepository,
+     * EntityRepository) is asked through findBy() on the identifier.
+     *
+     * @return object[]
+     */
+    protected function findEntities(string $class, array $ids): array
+    {
+        $ids = array_values(array_filter(
+            array_map(fn($id) => is_object($id) ? (method_exists($id, 'getId') ? $id->getId() : null) : $id, $ids),
+            static fn($id) => null !== $id && '' !== $id
+        ));
+        if (!$ids) {
+            return [];
+        }
+
+        $repository = $this->entityManager->getRepository($class);
+        if ($repository instanceof ServiceEntityRepository) {
+            return $repository->cacheById($ids, [])->getResult();
+        }
+
+        $identifier = $this->entityManager->getClassMetadata($class)->getSingleIdentifierFieldName();
+
+        return $repository->findBy([$identifier => $ids]);
+    }
+
+    protected function findEntity(string $class, mixed $id): ?object
+    {
+        if (null === $id || '' === $id || [] === $id) {
+            return null;
+        }
+
+        $repository = $this->entityManager->getRepository($class);
+        if ($repository instanceof ServiceEntityRepository) {
+            return $repository->cacheOneById($id);
+        }
+
+        return $repository->find($id);
+    }
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder->setDataMapper($this);
@@ -333,9 +375,8 @@ class SelectType extends AbstractType implements DataMapperInterface
                 $innerType = get_class($form->getConfig()->getType()->getInnerType());
                 $dataset = $form->getData() instanceof Collection ? $form->getData()->toArray() : (!is_array($form->getData()) ? [$form->getData()] : $form->getData());
                 if ($this->classMetadataManipulator->isEntity($options["class"])) {
-                    $classRepository = $this->entityManager->getRepository($options["class"]);
                     if ($dataset) {
-                        $dataset = $classRepository->cacheById($dataset)->getResult();
+                        $dataset = $this->findEntities($options["class"], $dataset);
                     }
                 }
 
@@ -401,8 +442,7 @@ class SelectType extends AbstractType implements DataMapperInterface
                 if ($this->classMetadataManipulator->isEntity($options["class"])) {
                     foreach ($dataChoices as $data) {
                         if (!in_array($data, $knownData)) {
-                            $classRepository = $this->entityManager->getRepository($options["class"]);
-                            $missingData[] = $classRepository->cacheOneById($data);
+                            $missingData[] = $this->findEntity($options["class"], $data);
                         }
                     }
                 }
@@ -534,12 +574,10 @@ class SelectType extends AbstractType implements DataMapperInterface
         // Retrieve existing entities
         if ($this->classMetadataManipulator->isEntity($options["class"])) {
 
-            $classRepository = $this->entityManager->getRepository($options["class"]);
-
             $options["multiple"] = $options["multiple"] ?? $this->formFactory->guessMultiple($choiceType->getParent(), $options);
             if (!$options["multiple"]) {
 
-                $dataChoices = $classRepository->cacheOneById($dataChoices);
+                $dataChoices = $this->findEntity($options["class"], $dataChoices);
 
             } else {
 
@@ -555,7 +593,7 @@ class SelectType extends AbstractType implements DataMapperInterface
 
                 $entities = [];
                 if ($dataChoices) {
-                    $entities = $classRepository->cacheById($dataChoices, [])->getResult();
+                    $entities = $this->findEntities($options["class"], $dataChoices);
                 }
 
                 foreach ($dataChoices as $pos => $id) {
@@ -705,7 +743,6 @@ class SelectType extends AbstractType implements DataMapperInterface
         }
 
         if (!$form->isSubmitted() && $this->classMetadataManipulator->isEntity($options["class"]) && ($data && !$data instanceof Collection)) {
-            $classRepository = $this->entityManager->getRepository($options["class"]);
 
             if ($options["multiple"]) {
                 // One entity, or one bare id (an attribute's stored value, "3"), is a list of one.
@@ -717,11 +754,11 @@ class SelectType extends AbstractType implements DataMapperInterface
                 $orderBy = array_flip($data ?? []);
                 $default = count($orderBy);
 
-                $data = $classRepository->cacheById($data, [])->getResult();
+                $data = $this->findEntities($options["class"], $data);
                 usort($data, fn($a, $b) => ($orderBy[$a->getId()] ?? $default) <=> ($orderBy[$b->getId()] ?? $default));
 
             } else {
-                $data = $this->classMetadataManipulator->isEntity($data) ? $data : $classRepository->cacheOneById($data);
+                $data = $this->classMetadataManipulator->isEntity($data) ? $data : $this->findEntity($options["class"], $data);
             }
 
             if (!$form->isSubmitted()) {
