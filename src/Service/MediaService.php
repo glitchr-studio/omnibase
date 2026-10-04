@@ -890,6 +890,7 @@ class MediaService extends FileService implements MediaServiceInterface
 
         try {
             if ($formatter instanceof BitmapFilterInterface) {
+                $this->preshrink($image, $filters);
                 $image->usePalette(new RGB());
                 $image->strip();
             }
@@ -927,6 +928,62 @@ class MediaService extends FileService implements MediaServiceInterface
         }
 
         return $formatter->getPath();
+    }
+
+    /**
+     * Bring a photo down to twice the thumbnail it is about to become, BEFORE
+     * strip() runs.
+     *
+     * strip() converts the colour profile pixel by pixel, and it ran on the
+     * full-size source: 3 s of the 4 s a 12-megapixel photo took to become a
+     * 500px thumbnail (9 s of 12 for a 9538px panorama). An album asks for
+     * dozens of them at once, which held every PHP worker for minutes - the
+     * 504s. On the reduced image the same conversion takes a few
+     * hundredths of a second.
+     *
+     * Only when the first thing done to the image is a thumbnail of known
+     * size, only with Imagick (scaleImage keeps the embedded profile, so the
+     * conversion that follows gives the same colours), never for an animated
+     * image, and never below twice the requested size on the shorter side -
+     * the thumbnail filter still does the final, good-quality resize.
+     */
+    private function preshrink(ImageInterface $image, array $filters): void
+    {
+        if (!$image instanceof \Imagine\Imagick\Image) return;
+
+        // The steps in the order they will run. A format filter carries its
+        // own (the controller wraps everything in one BitmapFilter), with an
+        // EXIF autorotation in front - which needs nothing of the source's
+        // size, so it is looked past.
+        $steps = [];
+        foreach ($filters as $filter) {
+            if ($filter instanceof FormatFilterInterface) {
+                if (method_exists($filter, 'getFilters')) array_push($steps, ...array_values($filter->getFilters()));
+                continue;
+            }
+            $steps[] = $filter;
+        }
+
+        $thumbnail = null;
+        foreach ($steps as $step) {
+            if ($step instanceof \Imagine\Filter\Basic\Autorotate) continue;
+            if ($step instanceof ThumbnailFilter) $thumbnail = $step;
+            break; // anything else first (a crop...): its geometry is the source's
+        }
+        if ($thumbnail === null) return;
+
+        $target = max((int) $thumbnail->getWidth(), (int) $thumbnail->getHeight());
+        if ($target <= 0) return;
+
+        $imagick = $image->getImagick();
+        if ($imagick->getNumberImages() > 1) return;
+
+        $width  = $imagick->getImageWidth();
+        $height = $imagick->getImageHeight();
+        $factor = min($width, $height) / (2 * $target);
+        if ($factor < 1.5) return; // not worth a pass
+
+        $imagick->scaleImage((int) round($width / $factor), (int) round($height / $factor));
     }
 
     /**
