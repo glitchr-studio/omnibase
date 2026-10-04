@@ -90,6 +90,10 @@ class AssociationType extends AbstractType implements DataMapperInterface
         $resolver->setDefaults([
             'class' => null,
             'form_type' => null,
+            // Read by the back office (Base\Admin\Form\FieldFormBuilder), not here: whether an
+            // AssociationField is this embedded form (true), a picker (false), or what its
+            // association says (null). This type, used by name, always embeds.
+            'embed' => null,
             'autoload' => true,
             'href' => null,
             'html' => false,

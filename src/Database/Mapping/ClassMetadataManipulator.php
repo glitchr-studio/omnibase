@@ -350,6 +350,11 @@ class ClassMetadataManipulator extends AbstractLocalCache
                     "translatable_class" => $classMetadata->getName(),
                     "translation_class" => $classMetadata->getName()::getTranslationEntityClass(),
                 ];
+            } elseif ($classMetadata->hasField($fieldName) && null !== ($enumClass = $this->getEnumClass($classMetadata, $fieldName))) {
+                // A PHP enum is chosen in a list of its cases, whatever the column
+                // that stores it (string, integer, simple_array, json): as a text
+                // input, the case itself went to the widget ("could not be converted to string").
+                $validFields[$fieldName] = ["form_type" => SelectType::class, "class" => $enumClass];
             } elseif ($this->getTypeOfField($entityOrClassOrMetadata, $fieldName) == "datetime") {
                 $validFields[$fieldName] = ["form_type" => DateTimePickerType::class];
             } elseif ($this->getTypeOfField($entityOrClassOrMetadata, $fieldName) == "array" || $this->getTypeOfField($entityOrClassOrMetadata, $fieldName) == "json") {

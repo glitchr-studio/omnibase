@@ -52,6 +52,22 @@ final class AssociationField implements FieldInterface
             ->setCustomOption(self::OPTION_DOCTRINE_ASSOCIATION_TYPE, null);
     }
 
+    /**
+     * The related record's own form, inside the form of the record being
+     * edited. By default the back office does that only for what the record
+     * owns (one-to-many, one-to-one); a record that exists on its own
+     * (many-to-one, many-to-many, a user account) is chosen in a list.
+     * `embed(false)` asks for the list whatever the association.
+     *
+     * @return $this
+     */
+    public function embed(bool $embed = true): self
+    {
+        $this->setFormTypeOption('embed', $embed);
+
+        return $this;
+    }
+
     public function justDisplay(): self
     {
         return $this->allowDelete(false)->allowAdd(false)->autoload(false);
