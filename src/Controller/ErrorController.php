@@ -90,14 +90,23 @@ class ErrorController extends AbstractController
         return $this->render('exception.html.twig', ['flattenException' => $flattenException]);
     }
 
+    /**
+     * The debug page of an error, under the error's own status: 403 for a
+     * refusal, 422 for a payload that does not validate, 404 for a page that
+     * does not exist, 500 for anything that is not an HTTP error.
+     *
+     * It answered 404 whatever the error. A response that is already a client
+     * error is kept as it is by the kernel, so in debug (dev, and the tests)
+     * every refusal and every validation failure of a signed-in user read as
+     * "not found" - while production, whose page is rendered with a 200 the
+     * kernel then replaces, gave the right one.
+     */
     public function Rescue(Throwable $exception): Response
     {
         $this->profiler?->disable();
 
         $flattenException = $this->htmlErrorRenderer->render($exception);
 
-        ob_start();
-        echo $flattenException->getAsString();
-        return new Response(ob_get_clean(), Response::HTTP_NOT_FOUND);
+        return new Response($flattenException->getAsString(), $flattenException->getStatusCode(), $flattenException->getHeaders());
     }
 }
