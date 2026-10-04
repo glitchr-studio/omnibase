@@ -73,10 +73,46 @@ bundle, and the rest as they are.
 | The boot code of `assets/app-defer.js` (closestScrollable guard, `<style>` headlock, nest-frame escape, `Sticky.ready`, `StickyStops.attach`, `Transparent.ready`, the current link) | `Base.boot()` from `vendor/glitchr/omnibase/assets/boot.js` |
 | A copy of opening hours, ICS / Google Calendar, invitations, signed downloads, QR sheets, allergens, comments, URL embeds, a polling script | glitchr/omnibase's shared bricks: [docs/40-commons](40-commons/index.md) |
 
+## First start, in this order
+
+```sh
+make install-dev          # = make env-dev, make build, make up - build BEFORE up
+make doctrine-migration   # the site's first migration
+make doctrine-migrate
+make database-test        # the test database
+docker exec <app>-web-1 php vendor/bin/phpunit
+```
+
+`make build` comes before any `up`. `/srv/app/public` is a named volume
+(`<app>-public`) that no image seeds: the composer step of `make build` copies
+`./public` (its `index.php`) into it when the volume is **empty**, then
+composer's `assets:install` links the bundles' assets
+(`public/bundles/*`). A stack started first - `make up`, a bare `docker compose
+up` - creates the volume with the `public/assets` mountpoint alone: not empty,
+so never seeded, and every page answers "File not found". Apfelschule's
+Makefile repairs that case itself since 2026-10-04 (`seed-public`, run by `make
+build`: a volume that exists without `index.php` gets `./public`); with an
+older Makefile, by hand:
+
+```sh
+docker run --rm -v <app>-public:/to -v "$PWD/public":/from:ro alpine cp /from/index.php /to/
+docker exec <app>-web-1 php bin/console assets:install public --symlink --relative
+```
+
+## Stopping a site
+
+`make down` (`docker compose down`, **without `-v`**): the containers and the
+site's two networks go, the volumes (database, public, vendor, storage) stay,
+and `make up` brings the site back as it was. Not `docker compose stop`: it
+keeps the networks, each holding a subnet of Docker's address pool, and with
+enough stopped sites the next `up` fails on "could not find an available,
+non-overlapping IPv4 address pool among the defaults to assign to the
+network". `-v` deletes the volumes: the database with them.
+
 ## Steps
 
 1. Copy the files of the first part; rename (`APP_NAME`, ports, `composer.json`, `package.json`).
-2. `make install-dev` (composer and yarn in the setup containers, `COMPOSER_ALLOW_SUPERUSER=1`).
+2. `make install-dev` (composer and yarn in the setup containers, `COMPOSER_ALLOW_SUPERUSER=1`): see the order above.
 3. `make doctrine-migration`, then `make doctrine-migrate` and `make database-test`.
    These run from a script or an agent as well as from a terminal: the
    Makefile's `DOCKER_WEB`, `DOCKER_DATABASE`, `DOCKER_PROXY` and `DOCKER_ASSETS`
