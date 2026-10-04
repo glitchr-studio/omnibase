@@ -2,6 +2,7 @@
 
 namespace Base\Service\Model;
 
+use Base\Form\Common\NativeEnum;
 use Base\Service\MediaServiceInterface;
 use Base\Service\Translator;
 use Base\Service\TranslatorInterface;
@@ -37,7 +38,23 @@ class Autocomplete
             return null;
         }
 
-        if (is_object($entry) && $class !== null) {
+        if (NativeEnum::is($class)) {
+
+            // A PHP enum: a case, or what a select holds for one.
+            $case = NativeEnum::of($class, $entry);
+            if ($case === null) {
+                return null;
+            }
+
+            $id = NativeEnum::id($case);
+            $text = NativeEnum::label($case, $this->translator);
+            $icons = $case instanceof IconizeInterface ? ($case->__iconize() ?? []) : [];
+            $icon = $icons ? begin($icons) : null;
+            $color = null;
+            $html = null;
+            $data = [];
+
+        } elseif (is_object($entry) && $class !== null) {
             $accessor = PropertyAccess::createPropertyAccessor();
             $id = $accessor->isReadable($entry, "id") ? strval($accessor->getValue($entry, "id")) : null;
 

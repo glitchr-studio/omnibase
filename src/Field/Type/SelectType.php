@@ -6,6 +6,7 @@ use Base\Admin\Controller\AbstractCrudController;
 use Base\Database\Mapping\ClassMetadataManipulator;
 use Base\Enum\UserRole;
 use Base\Database\Repository\ServiceEntityRepository;
+use Base\Form\Common\NativeEnum;
 use Base\Form\FormFactory;
 use Base\Service\LocalizerInterface;
 use Base\Service\MediaServiceInterface;
@@ -251,11 +252,37 @@ class SelectType extends AbstractType implements DataMapperInterface
         });
 
         $resolver->setNormalizer('class', function (Options $options, $value) {
-            if (!$this->classMetadataManipulator->isEntity($value)) {
+            // An entity, or a PHP enum ('class' => Status::class: its cases are the choices)
+            if (!NativeEnum::is($value) && !$this->classMetadataManipulator->isEntity($value)) {
                 return null;
             }
             return $value;
         });
+    }
+
+    /**
+     * What the field chooses among: an entity, one of omnibase's EnumType /
+     * SetType, or a PHP enum - read from the `class` option, else from the
+     * property the field is bound to (a Doctrine association, an `enumType:`
+     * column, a property typed with an enum).
+     *
+     * A PHP enum that was only guessed is left out when the field brings its
+     * own choices: those are what is stored, as they are given (the labels
+     * and string values a form wrote before enums were guessed).
+     */
+    protected function guessClass(FormInterface|FormEvent $form, ?array $options = null): ?string
+    {
+        $class = $this->formFactory->guessClass($form, $options);
+        if (!NativeEnum::is($class)) {
+            return $class;
+        }
+
+        $config = ($form instanceof FormEvent ? $form->getForm() : $form)->getConfig();
+        if ($config->getOption('class') === $class) {
+            return $class;
+        }
+
+        return null === $config->getOption('choices') && null === $config->getOption('choice_loader') ? $class : null;
     }
 
     /**
@@ -315,7 +342,7 @@ class SelectType extends AbstractType implements DataMapperInterface
             );
 
             // Guess some options
-            $options["class"] = $this->formFactory->guessClass($event, $options);
+            $options["class"] = $this->guessClass($event, $options);
             $options["sortable"] = $this->formFactory->guessSortable($event, $options);
             $options["multiple"] = $this->formFactory->guessMultiple($form, $options);
 
@@ -363,7 +390,7 @@ class SelectType extends AbstractType implements DataMapperInterface
 
             // Guess including class_priority
             $options["guess_priority"] = $options["class_priority"];
-            $options["class"] = $this->formFactory->guessClass($event, $options);
+            $options["class"] = $this->guessClass($event, $options);
 
             $dataChoice = $data["choice"] ?? null;
             $dataChoices = $options["multiple"] ? $dataChoice ?? [] : [];
@@ -371,7 +398,20 @@ class SelectType extends AbstractType implements DataMapperInterface
                 $dataChoices[] = $dataChoice;
             }
 
-            if ($options["class"]) {
+            if (NativeEnum::is($options["class"])) {
+
+                // A PHP enum: the submitted values that name a case (anything else is an invalid choice)
+                $choices = [];
+                foreach ($dataChoices as $id) {
+                    if (null === $case = NativeEnum::of($options["class"], $id)) {
+                        continue;
+                    }
+
+                    $label = NativeEnum::label($case, $this->translator);
+                    $choices[array_key_exists($label, $choices) ? $label . "/" . NativeEnum::id($case) : $label] = NativeEnum::id($case);
+                }
+
+            } elseif ($options["class"]) {
                 $innerType = get_class($form->getConfig()->getType()->getInnerType());
                 $dataset = $form->getData() instanceof Collection ? $form->getData()->toArray() : (!is_array($form->getData()) ? [$form->getData()] : $form->getData());
                 if ($this->classMetadataManipulator->isEntity($options["class"])) {
@@ -559,8 +599,14 @@ class SelectType extends AbstractType implements DataMapperInterface
             return;
         }
 
+        // A value that is no choice (it names no case of the enum): the field
+        // carries the error, the record keeps what it had.
+        if (!$choiceType->isSynchronized()) {
+            return;
+        }
+
         $options = $choiceType->getParent()->getConfig()->getOptions();
-        $options["class"] = $this->formFactory->guessClass($choiceType->getParent());
+        $options["class"] = $this->guessClass($choiceType->getParent());
 
         if (!$options["multiple"]) {
             $dataChoices = $choiceType->getViewData();
@@ -570,6 +616,15 @@ class SelectType extends AbstractType implements DataMapperInterface
 
         $multiple = $options["multiple"];
         
+        //
+        // A PHP enum: the case(s) the submitted value(s) name
+        if (NativeEnum::is($options["class"])) {
+
+            $dataChoices = is_array($dataChoices)
+                ? array_values(array_filter(array_map(fn($id) => NativeEnum::of($options["class"], $id), $dataChoices)))
+                : NativeEnum::of($options["class"], $dataChoices);
+        }
+
         //
         // Retrieve existing entities
         if ($this->classMetadataManipulator->isEntity($options["class"])) {
@@ -681,7 +736,7 @@ class SelectType extends AbstractType implements DataMapperInterface
     public function buildView(FormView $view, FormInterface $form, array $options): void
     {
         /* Override options.. I couldn't done that without accessing data */
-        $options["class"] = $this->formFactory->guessClass($form, $options);
+        $options["class"] = $this->guessClass($form, $options);
         $options["multiple"] = $this->formFactory->guessMultiple($form, $options);
         $options["sortable"] = $this->formFactory->guessSortable($form, $options);
 
@@ -740,6 +795,15 @@ class SelectType extends AbstractType implements DataMapperInterface
             if ($options["class"] && !$data instanceof $options["class"]) {
                 $data = null;
             }
+        }
+
+        if (NativeEnum::is($options["class"])) {
+
+            // A PHP enum: the select holds each case by its value (its name when the enum is not backed)
+            $toId = fn($d) => (null !== $case = NativeEnum::of($options["class"], $d)) ? NativeEnum::id($case) : null;
+            $data = is_iterable($data)
+                ? array_values(array_filter(array_map($toId, is_array($data) ? $data : iterator_to_array($data, false)), fn($id) => null !== $id))
+                : $toId($data);
         }
 
         if (!$form->isSubmitted() && $this->classMetadataManipulator->isEntity($options["class"]) && ($data && !$data instanceof Collection)) {
@@ -948,6 +1012,13 @@ class SelectType extends AbstractType implements DataMapperInterface
                     // Special text formatting
                     $fallback = is_string($key) ? $key : (is_string($choices) ? castcase($choices, $entryFormat) : $choices);
                     $entry["text"] = $entry["text"] ?? $fallback;
+
+                    // Choices given as ['Label' => 'value'] (Symfony's own shape) are shown
+                    // by their label, translated when it is a key ('@agenda.role.soloist'):
+                    // the value was printed in its place, the key never read.
+                    if (!$options["class"] && is_string($key) && $key !== "") {
+                        $entry["text"] = castcase($this->translator->trans($key), $entryFormat);
+                    }
 
                     // Check if entry selected
                     $entry["depth"] = $d;

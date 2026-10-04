@@ -249,3 +249,10 @@ allergen:
   sulphites: "Anhydride sulfureux et sulfites"
   lupin: "Lupin"
   molluscs: "Mollusques"
+
+# Base\Enum\CommentState: a PHP enum is labelled by <its short name in snake case>.<value> (see docs/20-architecture/forms.md).
+comment_state:
+  pending: "En attente de modération"
+  approved: "Publié"
+  spam: "Indésirable"
+  trash: "Retiré"

@@ -5,6 +5,7 @@ namespace Base\Form\Traits;
 use Base\Attributes\AttributeReader;
 use Base\Database\Attribute\Alias;
 use Base\Database\Attribute\OrderColumn;
+use Base\Form\Common\NativeEnum;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\PersistentCollection;
@@ -57,6 +58,10 @@ trait FormGuessTrait
                         if ($this->classMetadataManipulator->isEntity($parentDataClass)) {
                             $class = $this->classMetadataManipulator->getTargetClass($parentDataClass, $form->getName());
                         }
+
+                        // A property typed with a PHP enum, on an entity (a column
+                        // Doctrine does not know as one) or on a plain model.
+                        $class ??= $this->guessEnumOfProperty($parentDataClass, $form->getName());
 
                         if ($class) {
                             break;
@@ -126,6 +131,24 @@ trait FormGuessTrait
     }
 
     /**
+     * The PHP enum a class's property is typed with (`private Status $status`,
+     * `?Status`), null for any other property.
+     */
+    public function guessEnumOfProperty(?string $class, string $property): ?string
+    {
+        if (!$class || !class_exists($class) || !property_exists($class, $property)) {
+            return null;
+        }
+
+        $type = (new \ReflectionProperty($class, $property))->getType();
+        if (!$type instanceof \ReflectionNamedType || $type->isBuiltin()) {
+            return null;
+        }
+
+        return NativeEnum::is($type->getName()) ? $type->getName() : null;
+    }
+
+    /**
      * @param FormInterface|FormEvent|FormBuilderInterface $form
      * @param array|null $options
      * @return bool|mixed
@@ -160,6 +183,10 @@ trait FormGuessTrait
                     return $this->classMetadataManipulator->isToManySide($target, $targetField);
                 } elseif ($this->classMetadataManipulator->hasField($target, $targetField)) {
                     $typeOfField = $this->classMetadataManipulator->getTypeOfField($target, $targetField);
+                    if (null !== $this->classMetadataManipulator->getEnumClass($target, $targetField)) {
+                        // A PHP enum: one case, or a list of them (enumType: on a simple_array or json column)
+                        return in_array($typeOfField, ['simple_array', 'json', 'array'], true);
+                    }
                     $doctrineType = $this->classMetadataManipulator->getDoctrineType($typeOfField);
 
                     if ($this->classMetadataManipulator->isSetType($doctrineType)) {
@@ -363,7 +390,10 @@ trait FormGuessTrait
             $class = $options['class'];
 
             $permittedValues = null;
-            if ($this->classMetadataManipulator->isEnumType($class)) {
+            if (NativeEnum::is($class)) {
+                // A PHP enum: its cases, by what the select holds for each (see NativeEnum::id())
+                return NativeEnum::ids($class);
+            } elseif ($this->classMetadataManipulator->isEnumType($class)) {
                 $permittedValues = $class::getPermittedValuesByClass();
             } elseif ($this->classMetadataManipulator->isSetType($class)) {
                 $permittedValues = $class::getPermittedValuesByClass();
@@ -404,6 +434,9 @@ trait FormGuessTrait
             $target = $options['class'];
             if ($this->classMetadataManipulator->isEntity($target)) {
                 return true;
+            }
+            if (NativeEnum::is($target)) {
+                return false;
             }
             if ($this->classMetadataManipulator->isEnumType($target)) {
                 return false;

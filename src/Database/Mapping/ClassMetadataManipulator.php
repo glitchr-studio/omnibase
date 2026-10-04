@@ -113,6 +113,40 @@ class ClassMetadataManipulator extends AbstractLocalCache
         return is_subclass_of($entityOrClassOrMetadata, EnumType::class);
     }
 
+    /**
+     * A PHP enum (backed or not), as opposed to omnibase's own EnumType / SetType column types.
+     */
+    public function isNativeEnum(mixed $class): bool
+    {
+        if ($class instanceof \UnitEnum) {
+            return true;
+        }
+
+        return is_string($class) && enum_exists($class);
+    }
+
+    /**
+     * The PHP enum a column holds: Doctrine's `enumType:` (which Doctrine also
+     * reads by itself from a property typed with a backed enum), null for any
+     * other column.
+     */
+    public function getEnumClass(null|string|object $entityOrClassOrMetadata, string $fieldName): ?string
+    {
+        if (!$this->isEntity($entityOrClassOrMetadata) && !$entityOrClassOrMetadata instanceof ClassMetadata) {
+            return null;
+        }
+
+        $classMetadata = $this->getClassMetadata($entityOrClassOrMetadata);
+        $fieldName = $this->getFieldName($classMetadata, $fieldName) ?? $fieldName;
+        if (!$classMetadata->hasField($fieldName)) {
+            return null;
+        }
+
+        $enumType = $classMetadata->getFieldMapping($fieldName)->enumType ?? null;
+
+        return is_string($enumType) && enum_exists($enumType) ? $enumType : null;
+    }
+
     public const DEFAULT_TRACKING = 0;
 
     protected int $globalTrackingPolicy = self::DEFAULT_TRACKING;
@@ -768,6 +802,11 @@ class ClassMetadataManipulator extends AbstractLocalCache
         if ($this->hasAssociation($entityOrClassOrMetadata, $fieldName)) {
             return $this->getAssociationTargetClass($entityOrClassOrMetadata, $fieldName);
         } elseif ($this->hasField($entityOrClassOrMetadata, $fieldName)) {
+            // A PHP enum (enumType:, or a property typed with one)
+            if (null !== $enumClass = $this->getEnumClass($entityOrClassOrMetadata, $fieldName)) {
+                return $enumClass;
+            }
+
             // Doctrine types as well.. (e.g. EnumType or SetType)
             $fieldType = $this->getTypeOfField($entityOrClassOrMetadata, $fieldName);
 
