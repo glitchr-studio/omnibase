@@ -185,9 +185,13 @@ class ServiceEntityRepository extends \Doctrine\Bundle\DoctrineBundle\Repository
         return $criteria;
     }
 
+    /**
+     * The number of rows matching $criteria (all of them for []), as
+     * Doctrine's count() promises: an int, never the grouped rows.
+     */
     public function count(array $criteria = []): int
     {
-        return $this->__call(__METHOD__, [$criteria]);
+        return (int) $this->__call(__METHOD__, [$criteria]);
     }
 
     /**

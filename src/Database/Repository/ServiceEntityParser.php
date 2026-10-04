@@ -319,26 +319,44 @@ class ServiceEntityParser
         return $this->getQueryWithLength($criteria, $orderBy, $limit, $offset, $groupBy, $selectAs)->getResult();
     }
 
-    protected function __distinctCountBy(array $criteria = [], ?array $groupBy = null, ?array $selectAs = null): int
+    /**
+     * @return int|array an integer; rows of counts when grouped
+     */
+    protected function __distinctCountBy(array $criteria = [], ?array $groupBy = null, ?array $selectAs = null): int|array
     {
-        return $this->__countBy($criteria, self::COUNT_DISTINCT, $groupBy, $selectAs);
+        return $this->__countBy($criteria, self::COUNT_DISTINCT, null, $groupBy, $selectAs);
     }
 
     /**
+     * Counts the rows matching $criteria: an integer. Grouped (a $groupBy or a
+     * $selectAs), it gives the rows of the grouped query instead, each with
+     * its "count" (ThreadRepository::countForChildrenIn reads them so).
+     *
+     * Ungrouped, the query used to select the entity next to COUNT() and group
+     * by its id, so count([]) came back as one row per entity - an array where
+     * ServiceEntityRepository::count() promises an int.
+     *
      * @param array $criteria
      * @param string|null $mode
      * @param array|null $orderBy
      * @param array|null $groupBy
      * @param array|null $selectAs
-     * @return float|int|mixed|string|null
+     * @return int|array
      * @throws Exception
      */
     protected function __countBy(array $criteria = [], ?string $mode = null, ?array $orderBy = null, ?array $groupBy = null, ?array $selectAs = null)
     {
-        $mode ??= self::COUNT_ALL;
+        $mode = $mode ?: self::COUNT_ALL;
         $query = $this->getQueryWithCount($criteria, $mode, $orderBy, $groupBy, $selectAs);
-        return $query?->getResult();
+        if ($query === null) {
+            return 0;
+        }
 
+        if (empty($groupBy) && empty($selectAs)) {
+            return (int) $query->getSingleScalarResult();
+        }
+
+        return $query->getResult();
     }
 
 
@@ -2036,9 +2054,18 @@ class ServiceEntityParser
             $e_column = self::ALIAS_ENTITY . "." . $e_column;
         }
 
-        $queryBuilder = $this->getQueryBuilder($criteria, $orderBy ?? [], null, null, $groupBy ?? $selectAs ?? [], $selectAs ?? []);
+        $grouped = !empty($groupBy) || !empty($selectAs);
+
+        $queryBuilder = $this->getQueryBuilder($criteria, $grouped ? ($orderBy ?? []) : [], null, null, $groupBy ?? $selectAs ?? [], $selectAs ?? []);
         if ($this->classMetadata->hasAssociation($column)) {
             $this->leftJoin($queryBuilder, self::ALIAS_ENTITY . "." . $column);
+        }
+
+        if (!$grouped) {
+            // One number: COUNT() alone, neither the entity nor a GROUP BY
+            // (grouped by the counted column, each row counted itself).
+            $queryBuilder->select('COUNT(' . trim($mode . ' ' . $e_column) . ')')->resetDQLPart('orderBy');
+            return $queryBuilder->getQuery();
         }
 
         $queryBuilder->addSelect('COUNT(' . trim($mode . ' ' . $e_column) . ') AS count');
