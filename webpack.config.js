@@ -32,6 +32,8 @@ Encore.addPlugin(new WebpackBar())
     .copyFiles({from: './assets/styles/fonts', to: 'fonts/[path][name].[ext]'})
     // Plain stylesheets linked by the bundle's own partials (credits.css: @Base/partials/_credits.html.twig).
     .copyFiles({from: './assets/styles/credits', to: 'css/[name].[ext]'})
+    // Plain scripts a page links as they are (media.js: one thing sounds at a time, docs/40-commons/front-end.md).
+    .copyFiles({from: './assets/media', to: 'js/[name].[ext]'})
     .copyFiles({from: './assets/styles/images/bundles/', to: 'images/bundles/[path][name].[ext]'})
     .copyFiles({from: './assets/styles/images/', to: 'images/[path][name].[ext]', pattern: /\.(svg|webp|jpg|png|gif)$/})
 

@@ -74,6 +74,52 @@ open in the nest answer `X-Transparent-Nest` (omnibase/admin's
 `NestHeaderSubscriber`: every admin route, and any route with
 `defaults: ['_nest' => true]`).
 
+# `media:play`: one thing sounds at a time
+
+A page may hold several players - the audio bar of omnibase/music, the video
+player of omnibase/video, a film in its card, a third-party embed, a plain
+`<audio>`. They share nothing but this contract:
+
+1. a player that **starts sounding** dispatches `media:play` on `document`,
+   with `detail: { player, kind?, id?, … }` - `player` is any object that is
+   this player and no other;
+2. a player that **hears** `media:play` from another player pauses itself.
+
+No queue, no common state, no interface to implement: each player keeps its
+own. `media.js` (no dependency) is those two lines written once:
+
+```twig
+<script src="{{ asset('bundles/base/js/media.js') }}" defer></script>
+```
+
+```js
+import '../vendor/glitchr/omnibase/assets/media/media.js';     // bundled: the same script, window.MediaPlay
+
+const leave = MediaPlay.join(player, () => player.pause());      // 2. paused when another starts
+MediaPlay.announce(player, { kind: 'audio', id: track.id });     // 1. when this one starts
+leave();                                                         // the player is destroyed
+MediaPlay.current;                                               // the player that sounded last, or null
+```
+
+A script that does not load `media.js` takes part with the event alone:
+
+```js
+document.dispatchEvent(new CustomEvent('media:play', { detail: { player: me } }));
+document.addEventListener('media:play', (event) => { if (event.detail.player !== me) pause(); });
+```
+
+Plain elements need nothing. An `<audio>` or a `<video>` that starts with its
+sound on announces itself (`detail.player` is the element, `kind` its tag),
+and is paused when another player starts. A **muted** one - a hero's silent
+loop, a preview on hover - neither announces nor is paused; unmuted while
+playing, it announces itself then. `data-media-play="off"` on an element, or
+on anything around it, leaves it out (a sound effect; an element driven by a
+player that calls `announce()` itself).
+
+A third-party player that cannot be paused (an embed without an API) is
+removed, or its frame reloaded, by the function given to `join()`; a player
+whose pause fails does not keep the others from pausing.
+
 # Stimulus `poll`
 
 Ask a JSON address every few seconds and react when a value grows - a

@@ -24,6 +24,7 @@ An application or an `omnibase/*` bundle uses these; it does not keep a copy.
 | Pictures, texts rewritten in the back office | Twig `picture`, `Base\Entity\Layout\TextOverride` | [Pages and texts](pages-and-texts.md) |
 | Glitch Art's signature | `@Base/partials/_credits.html.twig` | [Front end](front-end.md) |
 | `Base.boot()`, Stimulus `poll` | `assets/boot.js`, `assets/controllers/poll_controller.js` | [Front end](front-end.md) |
+| One thing sounds at a time: the `media:play` event | `assets/media/media.js` (`bundles/base/js/media.js`) | [Front end](front-end.md) |
 
 ## Installation
 
