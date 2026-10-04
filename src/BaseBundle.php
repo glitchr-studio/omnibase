@@ -413,7 +413,13 @@ class BaseBundle extends AbstractBaseBundle
 
         /* Register aliased repositories */
         foreach (self::$aliasRepositoryList as $baseRepository => $aliasedRepository) {
-            
+
+            // A pool written before abstract repositories were set aside may
+            // still list one: never registered (the container cannot build it).
+            if (!self::isRepositoryService($baseRepository)) {
+                continue;
+            }
+
             $container->register($baseRepository)
                       ->addTag("doctrine.repository_service")
                       ->addArgument(new Reference('doctrine'));

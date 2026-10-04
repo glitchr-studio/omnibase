@@ -291,6 +291,38 @@ abstract class AbstractBaseBundle extends Bundle
         }
     }
 
+    /**
+     * Whether $class is registered as a Doctrine repository service (tagged
+     * doctrine.repository_service, built with `doctrine`): a class whose name
+     * ends with "Repository", that can be instantiated and that is a service
+     * repository (Doctrine's ServiceEntityRepositoryInterface, which
+     * omnibase's ServiceEntityRepository is).
+     *
+     * Every class of a bundle's src/Repository named so used to be
+     * registered, an abstract base repository included - and the container
+     * then had a service it could not build. Abstract classes, interfaces and
+     * traits are aliased like any class of the bundle, never registered.
+     */
+    public static function isRepositoryService(string $class): bool
+    {
+        if (!str_ends_with($class, "Repository")) {
+            return false;
+        }
+
+        try {
+            if (!self::classLoads($class)) { // false for an interface or a trait too
+                return false;
+            }
+
+            $reflection = new \ReflectionClass($class);
+        } catch (\ReflectionException $e) {
+            return false;
+        }
+
+        return $reflection->isInstantiable()
+            && $reflection->implementsInterface(\Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepositoryInterface::class);
+    }
+
     public function setAlias(array $classes)
     {
         foreach ($classes as $input => $output) {
@@ -316,7 +348,7 @@ abstract class AbstractBaseBundle extends Bundle
                 if (!$outputExists) {
                     class_alias($input, $output);
                 }
-                if (str_ends_with($input, "Repository")) {
+                if (self::isRepositoryService($input)) {
                     self::$aliasRepositoryList[$input] = $output;
                 } else {
                     self::$aliasList[$input] = $output;
