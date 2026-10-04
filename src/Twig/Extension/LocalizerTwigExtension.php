@@ -32,7 +32,11 @@ final class LocalizerTwigExtension extends AbstractExtension
             new TwigFilter('lang', [Localizer::class, 'getLocaleLang']),
             new TwigFilter('lang_name', [Localizer::class, 'getLocaleLangName']),
             new TwigFilter('country', [Localizer::class, 'getLocaleCountry']),
-            new TwigFilter('country_name', [Localizer::class, 'getLocaleCountryName']),
+            // A country's code ("JP") to its name in the page's language ("Japon"),
+            // or in the one given: {{ code|country_name('de') }}. Not a locale.
+            new TwigFilter('country_name', [Localizer::class, 'getCountryName']),
+            // The country of a locale ("fr-BE" -> "Belgium"), what country_name read before.
+            new TwigFilter('locale_country_name', [Localizer::class, 'getLocaleCountryName']),
         ];
     }
 

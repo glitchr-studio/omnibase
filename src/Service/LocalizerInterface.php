@@ -54,6 +54,8 @@ interface LocalizerInterface
 
     public function getLocaleCountryName(?string $locale = null): string;
 
+    public function getCountryName(?string $countryCode, ?string $displayLocale = null): string;
+
     //
     // Timezone, currency&country
     public static function getDefaultTimezone(): string;

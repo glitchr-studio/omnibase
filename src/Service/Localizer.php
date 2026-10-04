@@ -409,13 +409,31 @@ class Localizer extends AbstractLocalCache implements LocalizerInterface
     }
 
     /**
-     * @param string $countryCode
-     * @param string|null $displayLocale
-     * @return false|string
+     * A country's name from its ISO 3166-1 code (alpha-2, "JP"; alpha-3,
+     * "JPN", is read too), in the current language or in $displayLocale
+     * ("fr", "fr-FR", "fr_FR"): JP is "Japon" on a French page. This is the
+     * `|country_name` filter; a locale ("fr-BE") is not a country, the
+     * filter used to read one and named Japan "Belgique". An unknown code
+     * is returned as given, an empty one as "".
      */
-    public function getCountryName(string $countryCode, ?string $displayLocale = null)
+    public function getCountryName(?string $countryCode, ?string $displayLocale = null): string
     {
-        return Locale::getDisplayRegion($countryCode, $displayLocale);
+        $code = strtoupper(trim((string) $countryCode));
+        if ($code === "") {
+            return "";
+        }
+
+        $displayLocale = str_replace("-", "_", $displayLocale ?? $this->getLocale());
+
+        try {
+            return match (strlen($code)) {
+                2 => Countries::getName($code, $displayLocale),
+                3 => Countries::getAlpha3Name($code, $displayLocale),
+                default => (string) $countryCode,
+            };
+        } catch (MissingResourceException $e) {
+            return (string) $countryCode;
+        }
     }
 
     public function setCountry(string $countryCode): self
