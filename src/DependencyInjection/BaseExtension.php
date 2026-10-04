@@ -4,6 +4,8 @@ namespace Base\DependencyInjection;
 
 use Base\Attributes\AttributeInterface;
 use Base\BaseBundle;
+use Base\Database\Type\UtcDateTimeImmutableType;
+use Base\Database\Type\UtcDateTimeType;
 use Doctrine\DBAL\Types\Type;
 use Base\Cache\Abstract\AbstractLocalCacheInterface;
 use Base\Database\Entity\EntityExtensionInterface;
@@ -114,7 +116,12 @@ class BaseExtension extends AbstractBaseExtension implements PrependExtensionInt
      */
     private function prependDoctrineTypes(ContainerBuilder $builder): void
     {
-        $types = [];
+        // Moments kept in UTC whatever zone PHP was put in for the visitor
+        // (docs/20-architecture/time.md): there for every bundle and application.
+        $types = [
+            UtcDateTimeImmutableType::NAME => UtcDateTimeImmutableType::class,
+            UtcDateTimeType::NAME => UtcDateTimeType::class,
+        ];
 
         $classList = array_merge(
             BaseBundle::getAllClasses(BaseBundle::getBundleDir() . "/src/Enum"),
@@ -132,10 +139,6 @@ class BaseExtension extends AbstractBaseExtension implements PrependExtensionInt
             }
 
             $types[$className::getStaticName()] = $className;
-        }
-
-        if (!$types) {
-            return;
         }
 
         $builder->prependExtensionConfig('doctrine', ['dbal' => ['types' => $types]]);
