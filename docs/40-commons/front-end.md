@@ -71,7 +71,7 @@ It also makes jQuery's `closestScrollable` safe, keeps the `<style>` blocks
 scripts inject into `<head>` across swaps (`data-headlock`), and sends a site
 page that lands inside the nest frame to the main window. The routes that
 open in the nest answer `X-Transparent-Nest` (omnibase/admin's
-`NestHeaderSubscriber`: every admin route, and any route with
+`NestHeaderSubscriber`: every page under `/admin`, and any route with
 `defaults: ['_nest' => true]`).
 
 # `media:play`: one thing sounds at a time
