@@ -11,6 +11,8 @@ An application or an `omnibase/*` bundle uses these; it does not keep a copy.
 | Brick | Where | Page |
 |---|---|---|
 | Opening hours, special days, per place, JSON-LD | `Base\Entity\Hours\*`, `Base\Service\OpeningHours` | [Opening hours](opening-hours.md) |
+| JSON-LD `LocalBusiness` (address, phone, hours) | `Base\Service\LocalBusiness`, Twig `local_business_jsonld()` | [LocalBusiness JSON-LD](local-business.md) |
+| Redirections of a site's old addresses | `Base\Entity\Layout\Redirection`, `Base\Service\Redirections` | [Redirections](redirections.md) |
 | ICS file, Google Calendar link | `Base\Service\Calendar\{CalendarEntry, Ics, GoogleCalendarLink}` | [Calendar](calendar.md) |
 | Invitation by token | `Base\Entity\User\Invitation`, `Base\Service\Invitations` | [Invitations](invitations.md) |
 | Signed download links | `Base\Service\DownloadLinks` | [Downloads and QR codes](downloads-and-qr.md) |
@@ -27,8 +29,9 @@ An application or an `omnibase/*` bundle uses these; it does not keep a copy.
 
 Nothing to enable: the services are registered by the bundle
 (`config/services/commons.php`), the entities mapped with the others. A site
-that updates `glitchr/omnibase` gets four new tables on its next migration
-(`hoursWeekDay`, `hoursSpecialDay`, `threadComment`, `layoutTextOverride`):
+that updates `glitchr/omnibase` gets these tables on its next migration
+(`hoursWeekDay`, `hoursSpecialDay`, `hoursScopedWeek`, `threadComment`,
+`layoutTextOverride`, `layoutRedirection`):
 
 ```
 bin/console doctrine:migrations:diff
@@ -52,6 +55,8 @@ base:
         week:                        # until a week is saved in hoursWeekDay
             3: [['09:00', '13:00'], ['16:30', '19:00']]
             6: [['09:00', '18:00']]
+    local_business:                  # see LocalBusiness JSON-LD
+        address: { street: '1 rue Lindebuckel', postal_code: '67300', locality: Schiltigheim, country: FR }
     comments:
         min_delay: 4                 # seconds: a form sent faster is a robot
         flood_interval: 60           # seconds between two comments from one address

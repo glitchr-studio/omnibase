@@ -32,12 +32,16 @@ In a template, `opening_hours()` is the service:
 
 ```twig
 {% for line in opening_hours().summary() %}…{% endfor %}
-<script type="application/ld+json">{{ ({'@context': 'https://schema.org', '@type': 'LocalBusiness', name: site.name}|merge(opening_hours().schema()))|json_encode|raw }}</script>
+{{ local_business_jsonld() }}
 ```
 
 `schema()` gives schema.org's `openingHoursSpecification` and
 `specialOpeningHoursSpecification` (a closed day opens and closes at 00:00):
-Google reads the days off from there.
+Google reads the days off from there. `local_business_jsonld()` prints them
+with the business's name, address and phone: [LocalBusiness JSON-LD](local-business.md).
+
+The week and the days off are edited in the back office (omnibase/admin's
+"Opening hours" screen, `/admin/hours`).
 
 ## Several places
 
