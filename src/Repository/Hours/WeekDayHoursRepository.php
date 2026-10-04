@@ -26,9 +26,15 @@ class WeekDayHoursRepository extends ServiceEntityRepository
     /** @param array<int, array<array{0: string, 1: string}>> $week all seven days, ISO day => hours */
     public function save(array $week): void
     {
+        // By weekday, the entity's key: find() goes through findOneById(), and a WeekDayHours has no "id" field.
+        $days = [];
+        foreach ($this->findAll() as $day) {
+            $days[$day->getWeekday()] = $day;
+        }
+
         $em = $this->getEntityManager();
         for ($n = 1; $n <= 7; ++$n) {
-            $day = $this->find($n) ?? new WeekDayHours($n);
+            $day = $days[$n] ?? new WeekDayHours($n);
             $day->setHours($week[$n] ?? []);
             $em->persist($day);
         }
