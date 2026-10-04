@@ -10,7 +10,7 @@ An application or an `omnibase/*` bundle uses these; it does not keep a copy.
 
 | Brick | Where | Page |
 |---|---|---|
-| Opening hours, special days, JSON-LD | `Base\Entity\Hours\*`, `Base\Service\OpeningHours` | [Opening hours](opening-hours.md) |
+| Opening hours, special days, per place, JSON-LD | `Base\Entity\Hours\*`, `Base\Service\OpeningHours` | [Opening hours](opening-hours.md) |
 | ICS file, Google Calendar link | `Base\Service\Calendar\{CalendarEntry, Ics, GoogleCalendarLink}` | [Calendar](calendar.md) |
 | Invitation by token | `Base\Entity\User\Invitation`, `Base\Service\Invitations` | [Invitations](invitations.md) |
 | Signed download links | `Base\Service\DownloadLinks` | [Downloads and QR codes](downloads-and-qr.md) |

@@ -17,7 +17,7 @@ use Twig\TwigFunction;
  *
  *     embed_url(url)          what a page can frame of an address (Base\Service\Embeds)
  *     qr_code(data, size)     a QR code as an SVG data: URI (Base\Service\Qr\QrCode)
- *     opening_hours()         Base\Service\OpeningHours
+ *     opening_hours()         Base\Service\OpeningHours; opening_hours(store), opening_hours('store:12'): one place's
  *     image|picture(w, h)     a stored picture to its URL (an upload through the
  *                             image resolver at that size, a URL or a public path as
  *                             it is, anything else under public/assets/)
@@ -39,7 +39,7 @@ class CommonsTwigExtension extends AbstractExtension
         return [
             new TwigFunction('embed_url', fn (?string $url, bool $remote = true): ?array => $this->embeds->resolve($url, $remote)),
             new TwigFunction('qr_code', fn (string $data, int $size = 600): string => $this->qr->dataUri($data, $size)),
-            new TwigFunction('opening_hours', fn (): OpeningHours => $this->hours),
+            new TwigFunction('opening_hours', fn (string|object|null $scope = null): OpeningHours => null === $scope ? $this->hours : $this->hours->for($scope)),
         ];
     }
 

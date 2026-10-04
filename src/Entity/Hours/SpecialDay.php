@@ -11,11 +11,15 @@ use Doctrine\ORM\Mapping as ORM;
  * Base\Service\OpeningHours everywhere (the day an order is for, the time
  * slots, the footer, a banner, the JSON-LD's specialOpeningHoursSpecification).
  *
+ * Without a scope it is the whole site's; with one, that place's only
+ * (ScopedWeek: "store:12"), where it wins over the site's on the same date.
+ *
  * Its own table (hoursSpecialDay), see WeekDayHours.
  */
 #[ORM\Entity(repositoryClass: SpecialDayRepository::class)]
 #[ORM\Table(name: 'hoursSpecialDay')]
 #[ORM\Index(columns: ['endsOn'], name: 'hours_special_day_ends_idx')]
+#[ORM\Index(columns: ['scope'], name: 'hours_special_day_scope_idx')]
 class SpecialDay
 {
     #[ORM\Id]
@@ -40,8 +44,13 @@ class SpecialDay
     #[ORM\Column(type: 'datetime_immutable')]
     protected \DateTimeImmutable $createdAt;
 
-    public function __construct(\DateTimeInterface $from, ?\DateTimeInterface $until = null, ?string $reason = null)
+    /** The place it is for; null: the whole site. */
+    #[ORM\Column(type: 'string', length: 190, nullable: true)]
+    protected ?string $scope = null;
+
+    public function __construct(\DateTimeInterface $from, ?\DateTimeInterface $until = null, ?string $reason = null, ?string $scope = null)
     {
+        $this->scope = null === $scope || '' === trim($scope) ? null : trim($scope);
         $this->startsOn = $from->format('Y-m-d');
         $this->endsOn = ($until ?? $from)->format('Y-m-d');
         if ($this->endsOn < $this->startsOn) {
@@ -57,6 +66,7 @@ class SpecialDay
     public function getReason(): ?string { return $this->reason; }
     public function setReason(?string $reason): static { $this->reason = $reason ?: null; return $this; }
     public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
+    public function getScope(): ?string { return $this->scope; }
 
     public function getHours(): ?array { return $this->hours; }
 

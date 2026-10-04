@@ -3,6 +3,7 @@
 namespace Base\Service;
 
 use Base\Entity\Hours\SpecialDay;
+use Base\Repository\Hours\ScopedWeekRepository;
 use Base\Repository\Hours\SpecialDayRepository;
 use Base\Repository\Hours\WeekDayHoursRepository;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -17,6 +18,12 @@ use Symfony\Contracts\Service\ResetInterface;
  * one configured (base.opening_hours.week); special days
  * (Base\Entity\Hours\SpecialDay) close a date or open it at other hours.
  * Generalised from Nakaya's App\Service\OpeningHours.
+ *
+ * A site with several places asks for one of them: for('store:12'), or
+ * for($store), is the same service for that place - its own week
+ * (Base\Entity\Hours\ScopedWeek) when it has one, else the site's; its own
+ * special days, which win over the site's on the same date. The service
+ * itself stays the whole site's.
  */
 class OpeningHours implements ResetInterface
 {
@@ -28,6 +35,9 @@ class OpeningHours implements ResetInterface
     /** @var array<int, array<array{0: string, 1: string}>>|null loaded once per request */
     protected ?array $week = null;
 
+    /** The place this instance answers for; null: the whole site. */
+    protected ?string $scope = null;
+
     /**
      * @param array<int, array<array{0: string, 1: string}>> $defaultWeek ISO day => hours, until a week is saved
      */
@@ -37,8 +47,47 @@ class OpeningHours implements ResetInterface
         #[Autowire('%base.opening_hours.timezone%')] string $timezone = 'Europe/Paris',
         #[Autowire('%base.opening_hours.week%')] protected readonly array $defaultWeek = [],
         #[Autowire('%base.opening_hours.cutoff%')] protected readonly ?string $cutoff = null,
+        protected readonly ?ScopedWeekRepository $scopedWeeks = null,
     ) {
         $this->zone = new \DateTimeZone($timezone);
+    }
+
+    /**
+     * The same service for one place: a scope key ("store:12") or an entity
+     * (scopeOf()). Null or '': the whole site. A new instance each time - the
+     * shared service is never scoped.
+     */
+    public function for(string|object|null $scope): static
+    {
+        $scope = \is_object($scope) ? self::scopeOf($scope) : (null === $scope || '' === trim($scope) ? null : trim($scope));
+
+        $hours = clone $this;
+        $hours->scope = $scope;
+        $hours->week = null;
+        $hours->special = null;
+
+        return $hours;
+    }
+
+    /** The place this instance answers for; null: the whole site. */
+    public function scope(): ?string
+    {
+        return $this->scope;
+    }
+
+    /** An entity as a scope key: its class and its id ("App\Entity\Store:12"). */
+    public static function scopeOf(object $place): string
+    {
+        $class = $place::class;
+        if (false !== $marker = strrpos($class, '\\__CG__\\')) {
+            $class = substr($class, $marker + 8); // a Doctrine proxy answers for its entity
+        }
+        $id = method_exists($place, 'getId') ? $place->getId() : null;
+        if (null === $id || '' === (string) $id) {
+            throw new \InvalidArgumentException(sprintf('A %s has no id yet: it cannot own opening hours before it is saved.', $class));
+        }
+
+        return $class.':'.$id;
     }
 
     /** A worker serves many requests: each reads the hours again. */
@@ -56,6 +105,14 @@ class OpeningHours implements ResetInterface
     /** @return array<int, array<array{0: string, 1: string}>> the usual week, all seven days, ISO day => hours */
     public function week(): array
     {
+        if (null === $this->week && null !== $this->scope) {
+            try {
+                $this->week = $this->scopedWeeks?->week($this->scope); // null: the place follows the site's week
+            } catch (\Throwable) {
+                $this->week = null; // no table yet
+            }
+        }
+
         if (null === $this->week) {
             try {
                 $set = $this->weekDays?->week() ?? [];
@@ -92,12 +149,17 @@ class OpeningHours implements ResetInterface
         return $this;
     }
 
-    /** @return SpecialDay[] the special days still to come (or running today) */
+    /**
+     * @return SpecialDay[] the special days still to come (or running today):
+     *                      for a place, its own first (they win on a shared date), then the site's
+     */
     public function specialDays(): array
     {
         if (null === $this->special) {
+            $from = $this->local(null)->modify('-1 day');
             try {
-                $this->special = $this->specialDays?->upcoming($this->local(null)->modify('-1 day')) ?? [];
+                $own = null !== $this->scope ? ($this->specialDays?->upcoming($from, 50, $this->scope) ?? []) : [];
+                $this->special = array_merge($own, $this->specialDays?->upcoming($from) ?? []);
             } catch (\Throwable) {
                 $this->special = []; // no table yet: the usual week
             }
