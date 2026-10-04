@@ -18,6 +18,8 @@ use Symfony\Component\Form\FormView;
 use Symfony\Component\OptionsResolver\Options;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
+use Symfony\Contracts\Translation\LocaleAwareInterface;
+use Symfony\Component\Translation\TranslatorBagInterface;
 
 class FormTypeExtension extends AbstractTypeExtension
 {
@@ -35,8 +37,13 @@ class FormTypeExtension extends AbstractTypeExtension
 
     protected VersionManager $versionManager;
 
-    public function __construct(AdvancedRouterInterface $router, AuthorizationCheckerInterface $authorizationChecker, ParameterBagInterface $parameterBag, FormFactory $formFactory, FormProxyInterface $formProxy, ClassMetadataManipulator $classMetadataManipulator, VersionManager $versionManager)
+    /** @var (TranslatorBagInterface&LocaleAwareInterface)|null */
+    protected $translator;
+
+    public function __construct(AdvancedRouterInterface $router, AuthorizationCheckerInterface $authorizationChecker, ParameterBagInterface $parameterBag, FormFactory $formFactory, FormProxyInterface $formProxy, ClassMetadataManipulator $classMetadataManipulator, VersionManager $versionManager, $translator = null)
     {
+        // The catalogues, to tell where a field's texts are (inheritTranslationDomain()).
+        $this->translator = $translator instanceof TranslatorBagInterface && method_exists($translator, 'getLocale') ? $translator : null;
         $this->versionManager = $versionManager;
         $this->parameterBag = $parameterBag;
         $this->authorizationChecker = $authorizationChecker;
@@ -79,7 +86,72 @@ class FormTypeExtension extends AbstractTypeExtension
 
     public function finishView(FormView $view, FormInterface $form, array $options): void
     {
+        $this->inheritTranslationDomain($view);
         $this->browseView($view, $form, $options);
+    }
+
+    /**
+     * A field's texts given as keys of its form's domain are translated there.
+     *
+     * Every field gets the "fields" domain by default (configureOptions()
+     * above), which is not null: a field never inherited the
+     * translation_domain its form declares, as Symfony's would. A form of the
+     * "mailbox" domain with `'label' => 'form.subject'` had that key looked up
+     * in "fields", found nothing, and the theme printed an empty label (and
+     * help, and placeholder) - each bundle went around it by naming the domain
+     * in every key ("@mailbox.form.subject").
+     *
+     * So, for the theme: when none of the field's own texts (label, help,
+     * placeholder) exists in its domain and one does in the domain of a form
+     * above it, the field is rendered in that domain. A field whose texts are
+     * found where they were looked up is left as it is, as is one that names
+     * its domain in the key (@domain.key) or switches translation off.
+     */
+    protected function inheritTranslationDomain(FormView $view): void
+    {
+        $domain = $view->vars['translation_domain'] ?? null;
+        if (null === $this->translator || null === $view->parent || false === $domain) {
+            return;
+        }
+
+        $keys = [];
+        foreach ([$view->vars['label'] ?? null, $view->vars['help'] ?? null, $view->vars['attr']['placeholder'] ?? null, $view->vars['placeholder'] ?? null] as $text) {
+            if (\is_string($text) && '' !== $text && !str_starts_with($text, '@')) {
+                $keys[] = $text;
+            }
+        }
+        if (!$keys) {
+            return;
+        }
+
+        foreach ($keys as $key) {
+            if ($this->translates($key, $domain)) {
+                return;
+            }
+        }
+
+        for ($parent = $view->parent; null !== $parent; $parent = $parent->parent) {
+            $inherited = $parent->vars['translation_domain'] ?? null;
+            if (!\is_string($inherited) || '' === $inherited || $inherited === $domain) {
+                continue;
+            }
+            foreach ($keys as $key) {
+                if ($this->translates($key, $inherited)) {
+                    $view->vars['translation_domain'] = $inherited;
+
+                    return;
+                }
+            }
+        }
+    }
+
+    private function translates(string $key, ?string $domain): bool
+    {
+        try {
+            return $this->translator->getCatalogue($this->translator->getLocale())->has($key, $domain ?? 'messages');
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     public function browseView(FormView $view, FormInterface $form, array $options)

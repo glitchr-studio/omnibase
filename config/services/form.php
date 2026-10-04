@@ -32,7 +32,8 @@ return static function (ContainerConfigurator $container): void {
             new Reference('form.factory'),
             new Reference('form.proxy'),
             new Reference('base.database.metadata_manipulator'),
-            new Reference('Base\Service\VersionManager')
+            new Reference('Base\Service\VersionManager'),
+            new Reference('translator', ContainerInterface::NULL_ON_INVALID_REFERENCE),
         ]);
 
     $services->set('Base\Form\Extension\FormTypeWebpackExtension')
