@@ -24,6 +24,8 @@
     font-weight: bold;
 }
 .ga-credits--white { --ga-credits-ink: #fff; }
+/* The detail on the signature's left (a signature set on the right of its
+   footer); mirrored, on its right (a signature set on the left). */
 .ga-credits--mirror { flex-direction: row-reverse; justify-content: flex-end; }
 
 .ga-credits-sign {
@@ -50,6 +52,8 @@
 
 /* The detail beside it: shown while the signature is pointed at or focused. */
 .ga-credits-detail {
+    display: grid;
+    justify-content: end;
     margin: 0;
     font-size: 9pt;
     line-height: 1.5;
@@ -58,8 +62,22 @@
     opacity: 0;
     transition: opacity .25s ease;
 }
-.ga-credits--mirror .ga-credits-detail { text-align: left; }
+.ga-credits--mirror .ga-credits-detail { justify-content: start; text-align: left; }
 .ga-credits:hover .ga-credits-detail, .ga-credits:focus-within .ga-credits-detail { opacity: 1; }
+
+/* Where it fades in and out (a pointer that hovers), the detail holds no room:
+   hidden (opacity: 0), it still took its width, and a signature whose detail
+   sat between it and the edge it is set against stood that far from the edge
+   (about 140px from the left of the content on a site showing the detail on
+   the left). It has no width now and overflows on its own side, so the
+   signature stays against its edge, detail shown or not. */
+@media (hover: hover) {
+    .ga-credits { gap: 0; }
+    /* The gap it kept from the signature, as an offset that takes no room either. */
+    .ga-credits-detail { position: relative; left: -.75rem; width: 0; min-width: 0; flex: none; pointer-events: none; }
+    .ga-credits--mirror .ga-credits-detail { left: .75rem; }
+    .ga-credits:hover .ga-credits-detail, .ga-credits:focus-within .ga-credits-detail { pointer-events: auto; }
+}
 .ga-credits-line { display: block; }
 .ga-credits-time { opacity: .6; font-weight: normal; }
 .ga-credits--rule .ga-credits-line + .ga-credits-line { margin-top: .15rem; padding-top: .15rem; border-top: 1px dotted currentColor; }

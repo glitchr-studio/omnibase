@@ -20,7 +20,7 @@ linked by the partial.
 |---|---|---|
 | `color` | `black` (default), `white` | the text and the monkey; grey on hover. Never a colour of the site. |
 | `outline` | `false`, `true` | a white contour, on a photo or a busy background |
-| `mirror` | `false`, `true` | the detail line on the right instead of the left |
+| `mirror` | `false`, `true` | the detail line on the right of the signature instead of the left: for a signature set on the left of its footer |
 | `rule` | `false`, `true` | a dotted rule between the detail's two lines |
 | `detail` | `true`, `false` | the detail line at all |
 | `site_name` | text | its second line |
@@ -34,6 +34,14 @@ pointer (`@media (hover: none)`). Filling it differently:
     {% block credits_detail %}{{ parent() }}<span class="ga-credits-line" lang="de">Ein Apfel am Tag</span>{% endblock %}
 {% endembed %}
 ```
+
+The signature stands against the edge the site sets it on, whether its detail
+is shown or not: where the detail fades in and out (`@media (hover: hover)`) it
+holds no room and overflows on its own side. It is declared on the inner side:
+the default (detail on the left) for a signature on the right of its footer,
+`mirror: true` (detail on the right) for one on the left - else the detail
+opens outwards, over the page's margin. Without a pointer the detail is always
+shown and part of the block.
 
 Nothing else is customisable: neither the font nor the colours.
 
