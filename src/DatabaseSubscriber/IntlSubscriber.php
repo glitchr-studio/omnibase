@@ -14,6 +14,8 @@ use Base\Service\LocalizerInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Event\LoadClassMetadataEventArgs;
 use Doctrine\ORM\Event\OnFlushEventArgs;
+use Doctrine\ORM\Event\PreFlushEventArgs;
+use Doctrine\ORM\Event\PrePersistEventArgs;
 use Base\Database\Walker\TranslatableWalker;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Query;
@@ -134,6 +136,49 @@ class IntlSubscriber
             if (!$translation instanceof ($translatable::getTranslationEntityClass())) {
                 throw new \Exception('Upgrade class type required.');
             }
+        }
+    }
+
+    /**
+     * The same as preFlush(), for an entity the flush itself finds new
+     * through a cascade (it was in no scheduled insertion before).
+     */
+    public function prePersist(PrePersistEventArgs $args)
+    {
+        $entity = $args->getObject();
+        if ($entity instanceof TranslatableInterface && method_exists($entity, 'commitPendingTranslations')) {
+            $entity->commitPendingTranslations();
+        }
+    }
+
+    /**
+     * A translation translate() handed out for a locale the entity had none
+     * in is held aside until written in (TranslatableTrait): the written ones
+     * join their entity's collection here, before the unit of work computes
+     * what to insert, so `$entity->translate('de')->setTitle(...)` then
+     * flush() persists the German title as it always did.
+     */
+    public function preFlush(PreFlushEventArgs $args)
+    {
+        $uow = $this->entityManager->getUnitOfWork();
+
+        $entities = $uow->getScheduledEntityInsertions();
+        foreach ($uow->getIdentityMap() as $identities) { // keyed by root class: a translatable may be a subclass
+            foreach ($identities as $entity) {
+                $entities[] = $entity;
+            }
+        }
+
+        foreach ($entities as $entity) {
+            if (!$entity instanceof TranslatableInterface || !method_exists($entity, 'commitPendingTranslations')) {
+                continue;
+            }
+            // An uninitialized proxy has handed nothing out (any call would have loaded it)
+            if (method_exists($uow, 'isUninitializedObject') && $uow->isUninitializedObject($entity)) {
+                continue;
+            }
+
+            $entity->commitPendingTranslations();
         }
     }
 

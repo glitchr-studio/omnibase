@@ -63,6 +63,15 @@ trait TranslatableTrait
     protected $translations = null;
 
     /**
+     * The translations translate() handed out for a locale the entity has none
+     * in, by locale: kept out of the collection until something is written in
+     * them (see translate()). Not mapped.
+     *
+     * @var array<string, TranslationInterface>
+     */
+    protected array $pendingTranslations = [];
+
+    /**
      * @return TranslationInterface|ArrayCollection|Collection
      */
     public function getTranslations()
@@ -71,7 +80,37 @@ trait TranslatableTrait
             $this->translations = new ArrayCollection();
         }
 
+        $this->commitPendingTranslations();
+
         return $this->translations;
+    }
+
+    /**
+     * Moves into the collection the translations translate() handed out that
+     * have since been written in; the empty ones stay aside. Called by
+     * getTranslations() and translate(), and before each flush by
+     * IntlSubscriber::preFlush, so a value written through
+     * translate($locale)->setX() is persisted like before.
+     *
+     * @return $this
+     */
+    public function commitPendingTranslations()
+    {
+        foreach ($this->pendingTranslations as $locale => $translation) {
+            if ($translation->isEmpty()) {
+                continue;
+            }
+
+            unset($this->pendingTranslations[$locale]);
+            if ($this->translations === null) {
+                $this->translations = new ArrayCollection();
+            }
+            if (!$this->translations->containsKey($locale)) {
+                $this->addTranslation($translation);
+            }
+        }
+
+        return $this;
     }
 
     /**
@@ -80,6 +119,12 @@ trait TranslatableTrait
      */
     public function removeTranslation(TranslationInterface $translation)
     {
+        foreach ($this->pendingTranslations as $locale => $pending) {
+            if ($pending === $translation) {
+                unset($this->pendingTranslations[$locale]);
+            }
+        }
+
         if ($this->getTranslations()->contains($translation)) {
             $this->getTranslations()->removeElement($translation);
         }
@@ -92,7 +137,8 @@ trait TranslatableTrait
      */
     public function clearTranslations()
     {
-        foreach ($this->translations as $translation) {
+        $this->pendingTranslations = [];
+        foreach ($this->getTranslations() as $translation) {
             $this->translations->removeElement($translation);
         }
 
@@ -113,6 +159,25 @@ trait TranslatableTrait
     }
 
     /**
+     * The translation to read or write in a language.
+     *
+     * - translate($locale) is that locale's translation. When the entity has
+     *   none, a new one for that locale - which the entity holds aside, out of
+     *   its collection, until a value is written in it: a mere read (a getter
+     *   asking about a language nothing was written in) creates nothing, and
+     *   a write (translate('de')->setTitle(...)) is kept as it always was
+     *   (commitPendingTranslations()).
+     * - translate() (no locale) is the one to show on the current page: the
+     *   page's language when something is written in it, else the same
+     *   language in another region, else the default locale's, else the
+     *   first available locale's, else any written one; only when nothing is
+     *   written at all, a new one for the page's language, as above.
+     *
+     * A read in a language used to add an empty translation for it to the
+     * collection, and a later translate() on a page in that language found
+     * it: the default language was lost (Attribute::resolve(null) after
+     * resolve('ja') gave null).
+     *
      * @param string|null $locale
      * @return TranslationInterface|mixed|null
      * @throws Exception
@@ -129,47 +194,54 @@ trait TranslatableTrait
 
         $locale = intval($locale) < 0 ? $defaultLocale : $locale;
         $normLocale = $localizer->getLocale($locale); // Locale normalizer
-        $translationClass = self::getTranslationEntityClass();
-        $translations = $this->getTranslations();
+        $translations = $this->getTranslations(); // pending ones written in since are committed here
 
         $translation = $translations[$normLocale] ?? null;
-        if (!$translation && $locale === null) {
+        if ($translation && ($locale !== null || !$translation->isEmpty())) {
+            return $translation;
+        }
 
-            // First entry is default locale
-            $locales = array_filter($translations->getKeys(), fn($l) => in_array($l, $availableLocales));
-            foreach ($locales as $locale) {
-                $translation = $translations[$locale] ?? null;
-                if ($translation) {
-                    break;
+        if ($locale === null) {
+            $written = array_filter($translations->toArray(), fn($t) => $t && !$t->isEmpty());
+
+            // The same language in another region (fr-CA's page, fr-FR's text)
+            $lang = $localizer->getLocaleLang($normLocale);
+            foreach ($written as $key => $candidate) {
+                if (substr((string) $key, 0, 2) === $lang) {
+                    return $candidate;
                 }
             }
 
-            // Search for compatible lang
-            if ($translation == null) {
-                $locales = array_filter($translations->getKeys(), fn($l) => !in_array($l, $availableLocales));
-                $fallbackLocales = array_map(fn($l) => $localizer->getLocale($localizer->getLocaleLang($l)), $locales);
-
-                foreach (array_keys($fallbackLocales, $normLocale) as $normKey) {
-                    $translation = $translations[$locales[$normKey]] ?? null;
+            // The default locale, then the available ones in their order
+            foreach (array_unique(array_filter(array_merge([$defaultLocale], $availableLocales))) as $fallbackLocale) {
+                $fallbackLocale = $localizer->getLocale($fallbackLocale);
+                if (isset($written[$fallbackLocale])) {
+                    return $written[$fallbackLocale];
                 }
+            }
 
-                foreach ($locales as $locale) {
-                    $translation = $translations[$locale] ?? null;
-                    if ($translation) {
-                        break;
-                    }
-                }
+            // Any written one
+            if ($written) {
+                return reset($written);
+            }
+
+            // Nothing written anywhere: the page's own, empty as it is
+            if ($translation) {
+                return $translation;
             }
         }
 
-        // Create a new locale if still not found..
-        if (!$translation) {
+        // None in this locale: a new one, held aside until written in
+        if (!array_key_exists($normLocale, $this->pendingTranslations)) {
+            $translationClass = self::getTranslationEntityClass();
             $translation = new $translationClass();
             $translation->setLocale($normLocale);
-            $this->addTranslation($translation);
+            $translation->setTranslatable($this);
+
+            $this->pendingTranslations[$normLocale] = $translation;
         }
 
-        return $translation;
+        return $this->pendingTranslations[$normLocale];
     }
 
     /**

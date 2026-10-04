@@ -114,6 +114,8 @@ return static function (ContainerConfigurator $container): void {
         ->tag('doctrine.event_listener', ['event' => 'resolveDiscriminator', 'priority' => 2048])
         ->tag('doctrine.event_listener', ['event' => 'onQuery',              'priority' => 2048])
         ->tag('doctrine.event_listener', ['event' => 'postLoad',             'priority' => 2048])
+        ->tag('doctrine.event_listener', ['event' => 'prePersist',           'priority' => 2048])
+        ->tag('doctrine.event_listener', ['event' => 'preFlush',             'priority' => 2048])
         ->tag('doctrine.event_listener', ['event' => 'onFlush',              'priority' => 2048])
         ->args([
             new Reference('doctrine.orm.entity_manager'),
