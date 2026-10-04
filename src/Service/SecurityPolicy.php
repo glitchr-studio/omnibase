@@ -2,6 +2,8 @@
 
 namespace Base\Service;
 
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\Security\Core\Role\RoleHierarchyInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 
 /**
@@ -22,6 +24,14 @@ use Symfony\Component\Security\Core\User\UserInterface;
  * passkeys and TOTP off for every existing account the moment this class
  * shipped, so each flag below carries its own explicit default and only a real
  * stored value overrides it.
+ *
+ * Besides "everyone or no one" (the administrator's setting), the application
+ * may require a second factor of some roles only
+ * (base.security.two_factor.required_roles: [ROLE_STAFF]): whoever holds one
+ * of them, directly or through the role hierarchy, is asked to enrol and
+ * cannot switch the factor back off; everyone else stays free to choose.
+ * Hence the optional $user of the questions below: without one they answer
+ * for the whole site, with one for that account.
  */
 class SecurityPolicy
 {
@@ -44,8 +54,16 @@ class SecurityPolicy
     /** Session key holding a "not now" answer to the enrolment prompt. */
     public const SESSION_ENROLMENT_SKIPPED = 'security_2fa_enrolment_skipped';
 
-    public function __construct(private SettingBagInterface $settingBag)
-    {
+    /**
+     * @param string[] $requiredRoles roles whose holders must have a second factor (base.security.two_factor.required_roles)
+     * @param bool     $postpone      whether the enrolment prompt offers a "not now" (base.security.two_factor.postpone)
+     */
+    public function __construct(
+        private SettingBagInterface $settingBag,
+        private ?RoleHierarchyInterface $roleHierarchy = null,
+        #[Autowire('%base.security.two_factor.required_roles%')] private array $requiredRoles = [],
+        #[Autowire('%base.security.two_factor.postpone%')] private bool $postpone = true,
+    ) {
     }
 
     /**
@@ -68,15 +86,45 @@ class SecurityPolicy
     }
 
     /**
-     * Must every user hold a second factor?
+     * Must every user hold a second factor - or, given an account, must this one?
      *
      * Mandatory only means anything while the feature is available in the
      * first place - an administrator who turns two-factor off entirely and
      * leaves this checkbox ticked has not thereby locked everyone out.
      */
-    public function isTwoFactorMandatory(): bool
+    public function isTwoFactorMandatory(?UserInterface $user = null): bool
     {
-        return $this->isTwoFactorAvailable() && $this->flag(self::TWO_FACTOR_MANDATORY, false);
+        if (!$this->isTwoFactorAvailable()) {
+            return false;
+        }
+
+        return $this->flag(self::TWO_FACTOR_MANDATORY, false) || $this->isTwoFactorRequiredByRole($user);
+    }
+
+    /** @return string[] the roles whose holders must have a second factor */
+    public function getRequiredRoles(): array
+    {
+        return $this->requiredRoles;
+    }
+
+    /**
+     * Does this account hold one of the roles a second factor is required of
+     * (base.security.two_factor.required_roles), directly or through the role
+     * hierarchy? Asked of the account itself, not of the current token: the
+     * settings page and the enrolment prompt may be asked about any user.
+     */
+    public function isTwoFactorRequiredByRole(?UserInterface $user): bool
+    {
+        if (null === $user || [] === $this->requiredRoles || !$this->isTwoFactorAvailable()) {
+            return false;
+        }
+
+        $roles = array_map(static fn ($role) => $role instanceof \BackedEnum ? (string) $role->value : (string) $role, $user->getRoles());
+        if ($this->roleHierarchy) {
+            $roles = $this->roleHierarchy->getReachableRoleNames($roles);
+        }
+
+        return [] !== array_intersect($this->requiredRoles, $roles);
     }
 
     /** Are passkeys offered as a login method? */
@@ -118,9 +166,9 @@ class SecurityPolicy
      * This is the precedence rule in one line: no, while the administrator
      * requires one.
      */
-    public function canDisableTwoFactor(): bool
+    public function canDisableTwoFactor(?UserInterface $user = null): bool
     {
-        return !$this->isTwoFactorMandatory();
+        return !$this->isTwoFactorMandatory($user);
     }
 
     /** May this user still enrol - i.e. is the feature switched on for them? */
@@ -152,7 +200,21 @@ class SecurityPolicy
      */
     public function needsEnrolment(?UserInterface $user): bool
     {
-        return null !== $user && $this->isTwoFactorMandatory() && !$this->hasSecondFactor($user);
+        return null !== $user && $this->isTwoFactorMandatory($user) && !$this->hasSecondFactor($user);
+    }
+
+    /**
+     * Does the enrolment prompt offer this account a "not now"?
+     *
+     * Yes by default: the skip exists so that a policy change strands nobody
+     * mid-task, and it only lasts the session. An application that wants no
+     * "later" for the accounts a second factor is required of (staff reading
+     * patients' files) sets base.security.two_factor.postpone: false - the
+     * prompt then comes back on every page until the account has one.
+     */
+    public function canSkipEnrolment(?UserInterface $user = null): bool
+    {
+        return $this->postpone || !$this->needsEnrolment($user);
     }
 
     /**
@@ -163,8 +225,8 @@ class SecurityPolicy
      * comes back on the next sign-in. When two-factor is merely offered, a
      * dismissal can be kept for good.
      */
-    public function canPostponeEnrolmentPermanently(): bool
+    public function canPostponeEnrolmentPermanently(?UserInterface $user = null): bool
     {
-        return !$this->isTwoFactorMandatory();
+        return !$this->isTwoFactorMandatory($user);
     }
 }

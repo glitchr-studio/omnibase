@@ -12,6 +12,8 @@ The bundle is organised around a few long-lived pieces:
 - **Settings** — a compiled snapshot of configuration, read through
   `SettingBag`.
 - **Admin** — a from-scratch administration bundle (`base-bundle-admin`).
+- **Account security** — what the administrator sets, and a second factor
+  required of some roles: [Account security](account-security.md).
 - **Time** — PHP's zone is the visitor's; a moment is stored in UTC
   (`utc_datetime_immutable`), see [Time and time zones](time.md).
 

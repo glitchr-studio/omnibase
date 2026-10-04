@@ -665,6 +665,25 @@ class BaseConfiguration extends AbstractBaseConfiguration
                 ->end()
             ->end()
 
+            // Account security decided by the application (the administrator's own switches are settings: Base\Service\SecurityPolicy).
+            ->arrayNode('security')->addDefaultsIfNotSet()
+                ->children()
+                    ->arrayNode('two_factor')->addDefaultsIfNotSet()
+                        ->children()
+                            ->arrayNode('required_roles')
+                                ->info('Roles whose holders must have a second factor (directly or through the role hierarchy), e.g. [ROLE_STAFF]. Empty: the administrator\'s "mandatory for everyone" setting alone decides.')
+                                ->scalarPrototype()->end()
+                                ->defaultValue([])
+                                ->end()
+                            ->booleanNode('postpone')
+                                ->info('Whether the enrolment prompt offers a "not now" (kept for the session). False: an account a second factor is required of is sent back to the prompt on every page until it has one.')
+                                ->defaultTrue()
+                                ->end()
+                        ->end()
+                    ->end()
+                ->end()
+            ->end()
+
             // The shared bricks (docs/40-commons): opening hours, comments, signed downloads.
             ->arrayNode('opening_hours')->addDefaultsIfNotSet()
                 ->children()

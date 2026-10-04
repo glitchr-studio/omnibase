@@ -11,8 +11,10 @@ use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 /**
- * Sends a signed-in user to the enrolment prompt once, when the
- * administrator has made a second factor mandatory and this account has none.
+ * Sends a signed-in user to the enrolment prompt once, when a second factor
+ * is mandatory for this account - the administrator made it so for everyone,
+ * or the application requires it of one of the account's roles
+ * (base.security.two_factor.required_roles) - and the account has none.
  *
  * The redirect is deliberately narrow. It only ever happens on a plain
  * top-level GET of an HTML page, so nothing in-flight is interrupted: a form
@@ -91,11 +93,19 @@ class SecurityEnrolmentSubscriber implements EventSubscriberInterface
             $session->remove(SecurityPolicy::SESSION_NEW_DEVICE_PROMPT);
         }
 
-        if ($session && $session->isStarted() && $session->get(SecurityPolicy::SESSION_ENROLMENT_SKIPPED)) {
+        if (!$this->securityPolicy->needsEnrolment($user)) {
             return;
         }
 
-        if (!$this->securityPolicy->needsEnrolment($user)) {
+        // "Not now" lasts the session - unless the application offers no
+        // "later" to the accounts a second factor is required of
+        // (base.security.two_factor.postpone: false).
+        if ($session && $session->isStarted() && $session->get(SecurityPolicy::SESSION_ENROLMENT_SKIPPED) && $this->securityPolicy->canSkipEnrolment($user)) {
+            return;
+        }
+
+        // Someone impersonating the account (a super-admin's support) is not the one to enrol.
+        if ($this->security->isGranted('IS_IMPERSONATOR')) {
             return;
         }
 

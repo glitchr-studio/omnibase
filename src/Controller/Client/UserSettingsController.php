@@ -145,6 +145,8 @@ class UserSettingsController extends AbstractController
             'user' => $user,
             'policy' => $this->securityPolicy,
             'optional' => $offered,
+            // No "not now" where the application allows none (base.security.two_factor.postpone: false).
+            'skippable' => $offered || $this->securityPolicy->canSkipEnrolment($user),
         ]);
     }
 
@@ -157,6 +159,11 @@ class UserSettingsController extends AbstractController
 
         $session = $request->getSession();
         $offered = (bool) $session->get(SecurityPolicy::SESSION_NEW_DEVICE_PROMPT);
+
+        // A hand-made POST gets the same answer as the missing button.
+        if (!$this->securityPolicy->canSkipEnrolment($this->getUser())) {
+            return $this->redirectToRoute('user_settings_enrolment');
+        }
         $session->remove(SecurityPolicy::SESSION_NEW_DEVICE_PROMPT);
         $session->set(SecurityPolicy::SESSION_ENROLMENT_SKIPPED, true);
 
@@ -302,7 +309,7 @@ class UserSettingsController extends AbstractController
 
         // The precedence rule: while the administrator requires a second
         // factor, the user cannot give theirs up - password or no password.
-        if (!$this->securityPolicy->canDisableTwoFactor()) {
+        if (!$this->securityPolicy->canDisableTwoFactor($user)) {
             $notification = new Notification("@notifications.settings.twoFactorMandatory");
             $notification->send("warning");
 
@@ -345,7 +352,7 @@ class UserSettingsController extends AbstractController
 
         // Turning email codes off is only a problem when they are the second
         // factor the site insists on - i.e. when nothing else would be left.
-        if (!$enabling && !$this->securityPolicy->canDisableTwoFactor() && !$user->isTotpAuthenticationEnabled()) {
+        if (!$enabling && !$this->securityPolicy->canDisableTwoFactor($user) && !$user->isTotpAuthenticationEnabled()) {
             $notification = new Notification("@notifications.settings.twoFactorMandatory");
             $notification->send("warning");
 

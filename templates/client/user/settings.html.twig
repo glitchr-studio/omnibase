@@ -20,11 +20,11 @@
         {% if policy.isTwoFactorAvailable() %}
         <h5>
             {{'@forms.settings.twoFactor'|trans}}
-            {% if policy.isTwoFactorMandatory() %}
+            {% if policy.isTwoFactorMandatory(user) %}
                 <span class="badge bg-warning text-dark align-middle">{{'@forms.settings.requiredByAdmin'|trans}}</span>
             {% endif %}
         </h5>
-        {% if policy.isTwoFactorMandatory() and not policy.hasSecondFactor(user) %}
+        {% if policy.isTwoFactorMandatory(user) and not policy.hasSecondFactor(user) %}
             <div class="alert alert-warning py-2">{{'@forms.settings.enrolmentRequired'|trans}}</div>
         {% endif %}
         <ul class="list-group mb-3">
@@ -33,7 +33,7 @@
                 {% if user.isTotpAuthenticationEnabled() %}
                     <span class="d-flex align-items-center gap-2">
                         <span class="badge bg-success">{{'@forms.settings.enabled'|trans}}</span>
-                        {% if policy.canDisableTwoFactor() %}
+                        {% if policy.canDisableTwoFactor(user) %}
                         <form class="d-flex align-items-center gap-2 mb-0" method="post" action="{{ path('user_settings_2fa_disable') }}">
                             <input type="hidden" name="_token" value="{{ csrf_token('2fa_disable') }}">
                             <input type="password" name="password" class="form-control form-control-sm w-auto" placeholder="{{'@forms.login.password'|trans}}" required>
@@ -49,7 +49,7 @@
             </li>
             <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2">
                 {{'@forms.settings.emailCode'|trans}}
-                {% set emailCodeLocked = user.isEmailAuthEnabled() and not policy.canDisableTwoFactor() and not user.isTotpAuthenticationEnabled() %}
+                {% set emailCodeLocked = user.isEmailAuthEnabled() and not policy.canDisableTwoFactor(user) and not user.isTotpAuthenticationEnabled() %}
                 {% if emailCodeLocked %}
                     <span class="d-flex align-items-center gap-2">
                         <span class="badge bg-success">{{'@forms.settings.enabled'|trans}}</span>

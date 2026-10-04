@@ -48,11 +48,15 @@
 
         {# The way out. It exists so a policy change cannot strand somebody
            mid-task; while enrolment is mandatory the answer is kept in the
-           session only, and this page comes back on the next sign-in. #}
+           session only, and this page comes back on the next sign-in. Not
+           offered where the application allows no "later"
+           (base.security.two_factor.postpone: false). #}
+        {% if skippable ?? true %}
         <form method="post" action="{{ path('user_settings_enrolment_skip') }}">
             <input type="hidden" name="_token" value="{{ csrf_token('2fa_enrolment_skip') }}">
             <button class="btn btn-sm btn-link text-muted" type="submit">{{ (_optional ? '@forms.settings.newDevicePromptSkip' : '@forms.settings.enrolmentSkip')|trans }}</button>
         </form>
+        {% endif %}
     </div>
 </div>
 
