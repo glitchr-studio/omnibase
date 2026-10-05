@@ -14,6 +14,9 @@ The bundle is organised around a few long-lived pieces:
 - **Admin** — a from-scratch administration bundle (`base-bundle-admin`).
 - **Account security** — what the administrator sets, and a second factor
   required of some roles: [Account security](account-security.md).
+- **The demo environment** — `APP_ENV=demo`: declared demonstration
+  accounts, one click to sign in, a nightly reset, and what it refuses:
+  [The demo environment](demo.md).
 - **Forms** — the theme, and where a field's texts are translated:
   [Forms](forms.md).
 - **Sealed fields** — `#[Vault]`, its key pair, and what happens without

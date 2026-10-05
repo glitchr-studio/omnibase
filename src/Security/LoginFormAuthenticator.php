@@ -156,7 +156,9 @@ class LoginFormAuthenticator extends AbstractLoginFormAuthenticator
         }
 
         $defaultTargetPath = $request->getSession()->get('_security.' . $this->router->getRouteFirewall()->getName() . '.target_path');
-        return $this->router->redirect($defaultTargetPath ?? $this->router->getBaseDir());
+        // An application served at the root of its host, or asked without one
+        // (a command, a test), has an empty base directory: "/" then, not "".
+        return $this->router->redirect($defaultTargetPath ?? ($this->router->getBaseDir() ?: '/'));
     }
 
     protected function getLoginUrl(Request $request): string

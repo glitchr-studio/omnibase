@@ -1,0 +1,39 @@
+{#
+    "Comptes de démonstration": one button for each declared account (Base\Demo\DemoAccountProviderInterface),
+    signed in at a click. Printed in the `demo` environment only; a sign-in page includes it under its form:
+
+        {{ include('@Base/demo/_accounts.html.twig') }}
+
+    Each button is a POST form with a CSRF token - never a link. To rewrite it,
+    templates/bundles/BaseBundle/demo/_accounts.html.twig; its look hangs on .base-demo-accounts.
+#}
+{% set accounts = demo_accounts() %}
+{% if accounts is not empty %}
+<section class="base-demo-accounts" aria-labelledby="base-demo-accounts-title" data-demo-accounts>
+    <h2 id="base-demo-accounts-title">{{ '@demo.accounts.title'|trans }}</h2>
+    <p class="base-demo-accounts-intro">{{ '@demo.accounts.intro'|trans }}</p>
+    <ul>
+        {% for account in accounts %}
+        <li>
+            <form method="post" action="{{ path('security_loginDemo') }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('demo_login') }}">
+                <input type="hidden" name="account" value="{{ account.identifier }}">
+                <button type="submit" data-demo-account="{{ account.identifier }}">{{ account.label|trans }}</button>
+                {% if account.description %}<span>{{ account.description|trans }}</span>{% endif %}
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+</section>
+<style>
+    .base-demo-accounts { margin: 1.5rem auto 0; padding: 1rem 1.1rem; max-width: 34rem; border: 1px dashed currentColor; border-radius: 6px; text-align: left; font-size: .92rem; }
+    .base-demo-accounts h2 { margin: 0 0 .25rem; font-size: 1rem; font-weight: 700; }
+    .base-demo-accounts-intro { margin: 0 0 .75rem; opacity: .75; }
+    .base-demo-accounts ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
+    .base-demo-accounts form { display: flex; align-items: baseline; gap: .75rem; margin: 0; }
+    .base-demo-accounts button { flex: 0 0 auto; min-width: 9.5rem; padding: .4rem .8rem; border: 1px solid currentColor; border-radius: 4px; background: transparent; color: inherit; font: inherit; font-weight: 600; cursor: pointer; text-align: left; }
+    .base-demo-accounts button:hover, .base-demo-accounts button:focus-visible { box-shadow: inset 0 0 0 1px currentColor; text-decoration: underline; text-underline-offset: 3px; }
+    .base-demo-accounts form span { opacity: .8; line-height: 1.35; }
+    @media (max-width: 30rem) { .base-demo-accounts form { flex-direction: column; gap: .2rem; } .base-demo-accounts button { width: 100%; } }
+</style>
+{% endif %}

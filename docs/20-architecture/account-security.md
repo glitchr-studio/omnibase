@@ -77,3 +77,12 @@ $policy->canSkipEnrolment($user);
 ```
 
 A passkey replaces the password; it is not counted as a second factor.
+
+## In the demo environment
+
+A declared demonstration account ([The demo environment](demo.md)) is shared
+by every visitor: nothing above is required of it - not the second factor of
+its roles, not "mandatory for everyone" - and it changes none of its
+credentials (`isDemoAccount($user)`, `canChangeCredentials($user)`,
+`canEnableTwoFactor($user)`). Every other account, and every environment
+other than `demo`, is as described here.

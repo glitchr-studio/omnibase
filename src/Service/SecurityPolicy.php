@@ -2,6 +2,8 @@
 
 namespace Base\Service;
 
+use Base\Demo\DemoAccountRegistry;
+use Base\Demo\DemoMode;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Security\Core\Role\RoleHierarchyInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -32,6 +34,11 @@ use Symfony\Component\Security\Core\User\UserInterface;
  * cannot switch the factor back off; everyone else stays free to choose.
  * Hence the optional $user of the questions below: without one they answer
  * for the whole site, with one for that account.
+ *
+ * In the `demo` environment a demonstration account (Base\Demo) is shared by
+ * every visitor: nothing is required of it - not the second factor of its
+ * role, not the administrator's "mandatory" - and it may change none of its
+ * credentials (isDemoAccount(), canChangeCredentials()).
  */
 class SecurityPolicy
 {
@@ -63,7 +70,29 @@ class SecurityPolicy
         private ?RoleHierarchyInterface $roleHierarchy = null,
         #[Autowire('%base.security.two_factor.required_roles%')] private array $requiredRoles = [],
         #[Autowire('%base.security.two_factor.postpone%')] private bool $postpone = true,
+        private ?DemoMode $demoMode = null,
+        private ?DemoAccountRegistry $demoAccounts = null,
     ) {
+    }
+
+    /**
+     * Is this one of the declared demonstration accounts, in the `demo`
+     * environment? Never true anywhere else: in dev and test the same
+     * accounts are ordinary ones.
+     */
+    public function isDemoAccount(?UserInterface $user): bool
+    {
+        return null !== $user && $this->demoMode?->isActive() && null !== $this->demoAccounts?->of($user);
+    }
+
+    /**
+     * May this account change its password, its address, its second factor,
+     * or close itself? Not a demonstration account: every visitor signs in
+     * with it, and whoever changed one of these would lock the next out.
+     */
+    public function canChangeCredentials(?UserInterface $user): bool
+    {
+        return !$this->isDemoAccount($user);
     }
 
     /**
@@ -94,7 +123,7 @@ class SecurityPolicy
      */
     public function isTwoFactorMandatory(?UserInterface $user = null): bool
     {
-        if (!$this->isTwoFactorAvailable()) {
+        if (!$this->isTwoFactorAvailable() || $this->isDemoAccount($user)) {
             return false;
         }
 
@@ -115,7 +144,7 @@ class SecurityPolicy
      */
     public function isTwoFactorRequiredByRole(?UserInterface $user): bool
     {
-        if (null === $user || [] === $this->requiredRoles || !$this->isTwoFactorAvailable()) {
+        if (null === $user || [] === $this->requiredRoles || !$this->isTwoFactorAvailable() || $this->isDemoAccount($user)) {
             return false;
         }
 
@@ -171,10 +200,10 @@ class SecurityPolicy
         return !$this->isTwoFactorMandatory($user);
     }
 
-    /** May this user still enrol - i.e. is the feature switched on for them? */
-    public function canEnableTwoFactor(): bool
+    /** May this user still enrol - i.e. is the feature switched on for them? (Never a demonstration account.) */
+    public function canEnableTwoFactor(?UserInterface $user = null): bool
     {
-        return $this->isTwoFactorAvailable();
+        return $this->isTwoFactorAvailable() && !$this->isDemoAccount($user);
     }
 
     /**

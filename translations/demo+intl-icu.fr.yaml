@@ -1,0 +1,6 @@
+banner:
+    title: "Démonstration"
+    text: "données remises à zéro chaque nuit"
+accounts:
+    title: "Comptes de démonstration"
+    intro: "Un clic ouvre le site avec le rôle choisi. Rien n'est réel : aucun e-mail ne part, aucun paiement n'est encaissé."

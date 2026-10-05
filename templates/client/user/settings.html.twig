@@ -7,6 +7,10 @@
 
 {% if user %}
 
+{% if policy.isDemoAccount(user) %}
+<div class="alert alert-info" data-demo-locked>{{ '@notifications.demo.locked'|trans }}</div>
+{% endif %}
+
 <div class="card mb-3">
     <div class="card-header"><i class="fa-fw fa-solid fa-shield-halved"></i> {{'@forms.settings.security'|trans}}</div>
     <div class="card-body">
@@ -43,7 +47,7 @@
                         <small class="text-muted">{{'@forms.settings.lockedByAdmin'|trans}}</small>
                         {% endif %}
                     </span>
-                {% else %}
+                {% elseif policy.canEnableTwoFactor(user) %}
                     <a class="btn btn-sm btn-primary" href="{{ path('user_settings_2fa') }}">{{'@forms.settings.enable'|trans}}</a>
                 {% endif %}
             </li>
@@ -55,7 +59,7 @@
                         <span class="badge bg-success">{{'@forms.settings.enabled'|trans}}</span>
                         <small class="text-muted">{{'@forms.settings.lockedByAdmin'|trans}}</small>
                     </span>
-                {% else %}
+                {% elseif policy.canChangeCredentials(user) %}
                     <form class="mb-0" method="post" action="{{ path('user_settings_2fa_email_toggle') }}">
                         <input type="hidden" name="_token" value="{{ csrf_token('2fa_email') }}">
                         <button class="btn btn-sm {{ user.isEmailAuthEnabled() ? 'btn-outline-danger' : 'btn-outline-primary' }}" type="submit">

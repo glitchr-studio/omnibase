@@ -20,6 +20,8 @@ use Symfony\Component\DependencyInjection\Reference;
 use Base\Attributes\AttributeReader;
 use Base\Bundle\AbstractBaseBundle;
 use Base\Console\Command\CacheClearCommand;
+use Base\Demo\DemoGuard;
+use Base\Demo\DemoMode;
 use Base\DependencyInjection\Dumper\CliDumper;
 use Base\DependencyInjection\Dumper\HtmlDumper;
 use Base\Service\BaseService;
@@ -298,6 +300,13 @@ class BaseBundle extends AbstractBaseBundle
         }
         BaseService::setProjectDir($this->container->getParameter('kernel.project_dir'));
         BaseService::setEnvironment($this->container->getParameter('kernel.environment'));
+
+        // The demonstration refuses to start in debug or on the production
+        // database (docs/20-architecture/demo.md): asked here, for a page as
+        // for a command, before anything is read or written.
+        if (DemoMode::ENVIRONMENT === $this->container->getParameter('kernel.environment') && $this->container->has(DemoGuard::class)) {
+            $this->container->get(DemoGuard::class)->check();
+        }
 
         // Doctrine constructs SQLFilter classes (e.g. TrashFilter) itself, bypassing
         // the DI container entirely, so they can only reach AttributeReader through

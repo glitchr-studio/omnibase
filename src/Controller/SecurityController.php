@@ -40,6 +40,7 @@ use Base\Security\RescueFormAuthenticator;
 use Base\Service\MaintenanceProviderInterface;
 use Base\Service\LauncherInterface;
 use Base\Service\ParameterBagInterface;
+use Base\Service\SecurityPolicy;
 use Base\Service\TranslatorInterface;
 
 use Doctrine\ORM\EntityManagerInterface;
@@ -433,9 +434,17 @@ class SecurityController extends AbstractController
     }
 
     #[Route("/account-goodbye", name: "security_accountGoodbye")]
-    public function DisableAccountRequest(Request $request)
+    public function DisableAccountRequest(Request $request, SecurityPolicy $securityPolicy)
     {
         $user = $this->getUser();
+
+        // A demonstration account is everyone's: it does not close itself.
+        if (!$securityPolicy->canChangeCredentials($user)) {
+            $notification = new Notification("@notifications.demo.locked");
+            $notification->send("warning");
+
+            return $this->redirectToRoute($this->router->getRouteIndex());
+        }
 
         if ($user->isDisabled()) {
             $notification = new Notification("accountGoodbye.already");
@@ -487,7 +496,7 @@ class SecurityController extends AbstractController
      */
     
     #[Route("/reset-password", name: "security_resetPassword")]
-    public function ResetPasswordRequest(Request $request): Response
+    public function ResetPasswordRequest(Request $request, SecurityPolicy $securityPolicy): Response
     {
         if (($user = $this->getUser()) && $user->isPersistent()) {
             $notification = new Notification("login.already");
@@ -504,7 +513,17 @@ class SecurityController extends AbstractController
             $notification = new Notification("resetPassword.confirmation");
 
             $email = $form->get('email')->getData();
-            if (($user = $this->userRepository->findOneByEmail($email))) {
+            $user = $this->userRepository->findOneByEmail($email);
+            if ($user && !$securityPolicy->canChangeCredentials($user)) {
+
+                // A demonstration account keeps its password: said plainly, there is no secret about who it is.
+                $notification = new Notification("@notifications.demo.locked");
+                $notification->send("warning");
+
+                return $this->redirectToRoute(LoginFormAuthenticator::LOGIN_ROUTE);
+            }
+
+            if ($user) {
 
                 $user->removeExpiredTokens("reset-password");
                 if (!$user->getToken("reset-password")) {
@@ -529,7 +548,7 @@ class SecurityController extends AbstractController
      */
     
     #[Route("/reset-password/{token}", name: "security_resetPasswordWithToken")]
-    public function ResetPasswordResponse(Request $request, LoginFormAuthenticator $authenticator, UserAuthenticatorInterface $userAuthenticator, ?string $token = null): Response
+    public function ResetPasswordResponse(Request $request, LoginFormAuthenticator $authenticator, UserAuthenticatorInterface $userAuthenticator, SecurityPolicy $securityPolicy, ?string $token = null): Response
     {
         if (($user = $this->getUser()) && $user->isPersistent()) {
             $notification = new Notification("login.already");
@@ -549,6 +568,13 @@ class SecurityController extends AbstractController
         } else {
 
             $user = $resetPasswordToken->getUser();
+
+            if (!$securityPolicy->canChangeCredentials($user)) {
+                $notification = new Notification("@notifications.demo.locked");
+                $notification->send("warning");
+
+                return $this->redirectToRoute(LoginFormAuthenticator::LOGIN_ROUTE);
+            }
 
             // The token is valid; allow the user to change their password.
             $form = $this->createForm(SecurityResetPasswordConfirmType::class);

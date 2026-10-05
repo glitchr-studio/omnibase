@@ -125,3 +125,9 @@ settings:
 
 newDevice:
     subject: "New sign-in to your account, {0}"
+
+demo:
+    locked: "Demonstration account: its identifier, address, password and second factor do not change, and it cannot be deleted. Everyone uses it."
+    deleted: "A demonstration account cannot be deleted."
+    unknown: "This demonstration account is not available."
+    expired: "The sign-in page has expired. Please try again."

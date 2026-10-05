@@ -9,6 +9,7 @@ use Base\Database\Type\UtcDateTimeType;
 use Doctrine\DBAL\Types\Type;
 use Base\Cache\Abstract\AbstractLocalCacheInterface;
 use Base\Database\Entity\EntityExtensionInterface;
+use Base\Demo\DemoAccountProviderInterface;
 use Base\EntityDispatcher\EventDispatcherInterface;
 use Base\Service\Model\Currency\CurrencyApiInterface;
 use Base\Service\Model\IconProvider\AbstractIconAdapter;
@@ -63,6 +64,8 @@ class BaseExtension extends AbstractBaseExtension implements PrependExtensionInt
         $container->registerForAutoconfiguration(CompressionInterface::class)->addTag('obfuscator.compressor');
         $container->registerForAutoconfiguration(TagRendererInterface::class)->addTag('twig.tag_renderer');
         $container->registerForAutoconfiguration(WorkflowInterface::class)->addTag('workflow');
+        // The demonstration accounts a bundle or the application declares (docs/20-architecture/demo.md).
+        $container->registerForAutoconfiguration(DemoAccountProviderInterface::class)->addTag('base.demo_account_provider');
 
         $container->registerForAutoconfiguration(EventDispatcherInterface::class)->addTag('doctrine.event_listener', ["event" => "preUpdate"]);
         $container->registerForAutoconfiguration(EventDispatcherInterface::class)->addTag('doctrine.event_listener', ["event" => "postUpdate"]);

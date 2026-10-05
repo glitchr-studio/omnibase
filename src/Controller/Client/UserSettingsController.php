@@ -92,6 +92,23 @@ class UserSettingsController extends AbstractController
         return $codes;
     }
 
+    /**
+     * A demonstration account (the `demo` environment) changes nothing of
+     * its second factor: every visitor signs in with it. The settings page
+     * says so; this refuses the request all the same.
+     */
+    private function refuseDemoAccount(): ?Response
+    {
+        if (!$this->securityPolicy->isDemoAccount($this->getUser())) {
+            return null;
+        }
+
+        $notification = new Notification("@notifications.demo.locked");
+        $notification->send("warning");
+
+        return $this->redirectToRoute('user_settings');
+    }
+
     #[Route("/settings", name: "user_settings")]
     #[Iconize("fa-solid fa-fw fa-user-cog")]
     public function Settings(ConnectionRepository $connectionRepository)
@@ -245,6 +262,10 @@ class UserSettingsController extends AbstractController
         $user = $this->getUser();
         $session = $request->getSession();
 
+        if ($refusal = $this->refuseDemoAccount()) {
+            return $refusal;
+        }
+
         // The administrator can switch the whole feature off. Refuse here as
         // well as hiding the button, so a bookmarked URL is refused too.
         if (!$this->securityPolicy->canEnableTwoFactor()) {
@@ -303,6 +324,11 @@ class UserSettingsController extends AbstractController
     {
         $user = $this->getUser();
 
+        // Refused before anything is checked: nothing is changed, and the settings page shows a demonstration account no form to send.
+        if ($refusal = $this->refuseDemoAccount()) {
+            return $refusal;
+        }
+
         if (!$this->isCsrfTokenValid('2fa_disable', $request->request->get('_token'))) {
             throw $this->createAccessDeniedException();
         }
@@ -336,6 +362,10 @@ class UserSettingsController extends AbstractController
     #[Route("/settings/2fa/email", name: "user_settings_2fa_email_toggle", methods: ["POST"])]
     public function TwoFactorAuthentification_ToggleEmail(Request $request, EntityManagerInterface $entityManager)
     {
+        if ($refusal = $this->refuseDemoAccount()) {
+            return $refusal;
+        }
+
         if (!$this->isCsrfTokenValid('2fa_email', $request->request->get('_token'))) {
             throw $this->createAccessDeniedException();
         }

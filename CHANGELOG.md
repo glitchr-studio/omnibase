@@ -7,6 +7,17 @@ Versions follow the branch-per-major scheme: branch `3.x` → tags `3.0.0`,
 ## [Unreleased]
 
 ### Added
+- The `demo` environment (`docs/20-architecture/demo.md`): demonstration
+  accounts declared by the bundles and the application
+  (`Base\Demo\DemoAccountProviderInterface`), created by the fixtures
+  (`DemoAccountFactory`), offered at a click on the sign-in page
+  (`@Base/demo/_accounts.html.twig`, a POST with a CSRF token); the banner
+  (`@Base/demo/_banner.html.twig`); `demo:reset` under `symfony/lock`; no
+  e-mail sent, `X-Robots-Tag: noindex`, credentials of a demonstration
+  account locked, the staff's mandatory second factor lifted for it, the
+  super-administrator signed in by a secret or not at all, and a kernel that
+  refuses to start in debug or on the production database. Nothing of it is
+  registered in any other environment.
 - Standalone Docker demo (root `Dockerfile` + `example/app/`): bare Symfony
   skeleton + this bundle + SQLite, one flat page touring the App\ ↔ Base\
   mirroring, entity layer, setting bag, obfuscator and translator. The

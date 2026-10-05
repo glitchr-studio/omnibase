@@ -1,0 +1,19 @@
+{#
+    The demonstration's banner: "Démonstration — données remises à zéro chaque nuit".
+    Printed in the `demo` environment only; a layout includes it once, first thing in <body>:
+
+        {{ include('@Base/demo/_banner.html.twig') }}
+
+    Its colours are two custom properties a site may set (--demo-banner-bg, --demo-banner-fg);
+    to rewrite it, templates/bundles/BaseBundle/demo/_banner.html.twig.
+#}
+{% if demo_mode() %}
+<div class="base-demo-banner" role="note" data-demo-banner>
+    <strong>{{ '@demo.banner.title'|trans }}</strong><span aria-hidden="true"> — </span>{{ '@demo.banner.text'|trans }}
+</div>
+<style>
+    .base-demo-banner { margin: 0; padding: .35rem 1rem; text-align: center; font: 500 12.5px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; letter-spacing: .01em; background: var(--demo-banner-bg, #1c1c1c); color: var(--demo-banner-fg, #fff); position: relative; z-index: 1000; }
+    .base-demo-banner strong { font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: .92em; }
+    @media print { .base-demo-banner { display: none; } }
+</style>
+{% endif %}

@@ -68,7 +68,7 @@ RUN echo "omni families as of ${OMNI_REFRESH}" \
     && composer config repositories.omnibase '{"type": "path", "url": "/srv/omnibase", "options": {"symlink": false, "versions": {"glitchr/omnibase": "3.x-dev"}}}' \
     && composer require "glitchr/omnibase:3.x-dev as 3.0.x-dev" $(for p in $PLUGINS; do printf '%s:*@dev ' "$p"; done) \
         "glitchr/omnitrade:1.x-dev" "omnitrade/stripe:1.x-dev" "glitchr/omnibus:2.x-dev" "omnibus/offline:2.x-dev" "omnibus/mondial-relay:2.x-dev" \
-        omnipay/stripe symfony/translation symfony/messenger --no-interaction --no-progress --no-scripts \
+        omnipay/stripe symfony/translation symfony/messenger symfony/lock --no-interaction --no-progress --no-scripts \
     # PHPUnit, for `demo test <plugin>`: a plugin's suite run against this
     # very application (its checkout mounted by compose.checkouts.yml).
     && composer require --dev "phpunit/phpunit:^9.6" --no-interaction --no-progress --no-scripts \

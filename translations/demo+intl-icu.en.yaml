@@ -1,0 +1,6 @@
+banner:
+    title: "Demonstration"
+    text: "data reset every night"
+accounts:
+    title: "Demonstration accounts"
+    intro: "One click opens the site in the chosen role. Nothing is real: no e-mail is sent, no payment is taken."

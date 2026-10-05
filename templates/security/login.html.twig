@@ -71,6 +71,9 @@
         </div>
     </div>
 
+    {# The `demo` environment: one button for each declared demonstration account. Nothing elsewhere. #}
+    {{ include('@Base/demo/_accounts.html.twig') }}
+
     <div class="card-footer">
         <div class="text-center">
             {{'@forms.login.noAccount'|trans}}

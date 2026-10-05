@@ -126,3 +126,9 @@ settings:
 
 newDevice:
     subject: "Nouvelle connexion à ton compte, {0}"
+
+demo:
+    locked: "Compte de démonstration : son identifiant, son adresse, son mot de passe et son second facteur ne changent pas, et il ne se supprime pas. Tout le monde s'en sert."
+    deleted: "Un compte de démonstration ne peut pas être supprimé."
+    unknown: "Ce compte de démonstration n'est pas disponible."
+    expired: "La page de connexion a expiré. Merci de réessayer."

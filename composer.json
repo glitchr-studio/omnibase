@@ -91,7 +91,9 @@
         "twig/twig": "^3.0"
     },
     "suggest": {
-        "dompdf/dompdf": "Base\\Response\\PdfResponse: an HTML page answered as a PDF (^3.0)"
+        "doctrine/doctrine-fixtures-bundle": "demo:reset reloads the fixtures (the demo environment)",
+        "dompdf/dompdf": "Base\\Response\\PdfResponse: an HTML page answered as a PDF (^3.0)",
+        "symfony/lock": "demo:reset runs under a lock (the demo environment)"
     },
     "require-dev": {
         "phpstan/phpstan": "^1.12",
@@ -101,6 +103,7 @@
         "squizlabs/php_codesniffer": "^3.7",
         "doctrine/doctrine-migrations-bundle": "^3.0",
         "symfony/debug-bundle": "^6.0|^7.0|^8.0",
+        "symfony/lock": "^6.0|^7.0|^8.0",
         "symfony/phpunit-bridge": "^6.0|^7.0|^8.0",
         "symfony/stopwatch": "^6.0|^7.0|^8.0",
         "symfony/var-dumper": "^6.0|^7.0|^8.0",

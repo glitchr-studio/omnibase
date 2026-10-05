@@ -245,6 +245,147 @@ The same key pair seals the fields marked `#[Vault]` - the API keys typed in
 the back office - and without it they are refused, not stored in clear: see
 [Sealed fields](20-architecture/vault.md).
 
+## The demonstration: what a site adds {#demo}
+
+`APP_ENV=demo` runs the site as a demonstration ([The demo
+environment](20-architecture/demo.md)): production's behaviour, a database of
+its own (`<database>_demo`), one button for each role on the sign-in page, a
+reset every night. Everything is in glitchr/omnibase; a site adds these lines.
+
+**`.env.demo`** (committed: defaults only, as `.env.prod`; no secret):
+
+```sh
+HTTPS=on
+HTTP_REDUCTION=true
+HTTP_DOMAIN='["demo.example.org", "localhost"]'
+HTTP_SUBDOMAIN='["", "www"]'
+HTTP_MACHINE='[""]'
+HTTP_BASEDIR=/
+HTTP_PORT='[80,8126]'
+HTTPS_PORT='[443,8643]'
+USE_SYS_TMPDIR=false
+# DEMO_SUPERADMIN_PASSWORD is NOT here: the super-administrator's password in
+# the demonstration is a secret of the server (.env.demo.local, git-ignored,
+# or a real variable). Unset, that account cannot sign in.
+```
+
+A real variable beats every `.env*` file, and the containers get `.env` as
+real variables: `.env.demo` cannot change what `.env` defines. What differs in
+demo is said under `when@demo`.
+
+**`config/bundles.php`** - the fixtures are loaded in demo:
+
+```php
+Doctrine\Bundle\FixturesBundle\DoctrineFixturesBundle::class => ['dev' => true, 'test' => true, 'demo' => true],
+```
+
+(`doctrine/doctrine-fixtures-bundle` is in `require-dev`:
+`deployments/docker/composer/entrypoint.sh` installs the dev packages for
+demo too - a `demo*) composer install --no-interaction ;;` beside `test*)`.)
+
+**`config/services.yaml`** - the fixtures are services where the bundle is:
+
+```yaml
+when@dev: &fixtures
+    services:
+        App\DataFixtures\:
+            resource: '../src/DataFixtures/'
+            autowire: true
+            autoconfigure: true
+
+when@demo: *fixtures
+```
+
+**`config/packages/doctrine.yaml`** - production's pools, a database of its own:
+
+```yaml
+when@prod: &prod
+    framework:
+        cache:
+            pools:
+                doctrine.result_cache_pool: { adapter: cache.app }
+                doctrine.system_cache_pool: { adapter: cache.system }
+
+when@demo:
+    <<: *prod
+    doctrine:
+        dbal:
+            connections:
+                default:
+                    dbname_suffix: '_demo'
+```
+
+**`config/packages/base.yaml`** - which database production's is (the
+demonstration refuses to start on it, and without this line):
+
+```yaml
+when@demo:
+    base:
+        demo:
+            production_database: 'mysql://%env(DOCTRINE_DATABASE_HOST)%:%env(DOCTRINE_DATABASE_PORT)%/%env(DOCTRINE_DATABASE)%'
+            reset:
+                purge: []      # storages of the site's own that demo:reset empties
+```
+
+**Every other `when@prod`** (`monolog.yaml`, ...): `when@prod: &prod`, then
+`when@demo: *prod` at the end of the file. **`config/packages/mailer.yaml`**:
+`when@demo: { framework: { mailer: { dsn: 'null://null' } } }` (omnibase
+refuses every message in demo whatever the DSN; this keeps anything else
+from trying).
+
+**`deployments/docker/cron/crontab`** - the same file in every environment,
+so the line checks:
+
+```cron
+30  3  * * *  [ "$APP_ENV" = demo ] && php /srv/app/bin/console demo:reset >> /srv/app/var/log/cron.demo-reset.log 2>&1
+```
+
+**`Makefile`**:
+
+```make
+## Configure environment for the demonstration (production's behaviour, <database>_demo)
+env-demo:
+	@APP_ENV=demo APP_DEBUG=0 $(MAKE) env
+
+## Create the demonstration's database, its schema and its fixtures
+database-demo:
+	@$(DOCKER_DATABASE) sh -c 'mysql -uroot -p"$$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS \`$(MYSQL_DATABASE)_demo\`; GRANT ALL ON \`$(MYSQL_DATABASE)_demo\`.* TO \"$(MYSQL_USER)\"@\"%\";"'
+	@$(DOCKER_WEB) php bin/console doctrine:migrations:migrate --env=demo --no-debug --no-interaction
+	@$(DOCKER_WEB) php bin/console doctrine:fixtures:load --env=demo --no-debug --no-interaction
+```
+
+**The key pair** - `#[Vault]` seals with the environment's pair
+([Sealed fields](20-architecture/vault.md)): `secrets:generate-keys
+--env=demo` (see [Secrets](#secrets)), both files committed as for dev and
+test - a demonstration's data protects nothing real. The one real secret of
+a demonstration, `DEMO_SUPERADMIN_PASSWORD`, therefore never goes in that
+vault: `.env.demo.local` or a real variable.
+
+**The templates** - one line each:
+
+```twig
+{# templates/base.html.twig (or the layout): first thing in <body> #}
+{{ include('@Base/demo/_banner.html.twig') }}
+
+{# templates/security/login.html.twig: under the form #}
+{{ include('@Base/demo/_accounts.html.twig') }}
+```
+
+**The accounts** - a bundle of the trade declares its roles; the site adds
+its own in `src/Demo/DemoAccounts.php` (`DemoAccountProviderInterface`), and
+its fixtures take them from `Base\Demo\DemoAccountFactory` instead of
+writing them a second time.
+
+**`src/Kernel.php`** - only if it lists the environments it allows
+(`getAllowedEnvs()`, Symfony 8.1's skeleton): add `'demo'`.
+
+Then:
+
+```sh
+make env-demo && make up       # production's stack, APP_ENV=demo
+make database-demo             # once
+```
+
 ## What a new site no longer copies
 
 | No longer in the site | Use instead |

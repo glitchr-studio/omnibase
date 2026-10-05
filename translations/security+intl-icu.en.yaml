@@ -1,2 +1,3 @@
 "Invalid CSRF token.": "Invalid CSRF token provided. Please try to resubmit the form."
 "Invalid credentials.": "Unable to login, incorrect credentials."
+"This account is not available in the demonstration.": "This account is not available in the demonstration."
