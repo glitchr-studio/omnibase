@@ -89,7 +89,10 @@ class SlugifyPerTypeTest extends KernelTestCase
             $category = new class extends Taxon {};
             $this->assertSame($section, $this->holder($slugify, [$section], $category, 'desserts'), 'another type still holds the slug: the old index would refuse a second one');
         } finally {
-            $connection->executeStatement('DROP INDEX UNIQ_OLD_TAXON_SLUG');
+            // Through the schema manager: "DROP INDEX name" alone is SQLite's
+            // syntax, MySQL wants "... ON table" - there the statement failed and
+            // left the index behind in the application's database.
+            $connection->createSchemaManager()->dropIndex('UNIQ_OLD_TAXON_SLUG', 'threadTaxon');
             $memo->setValue(null, []);
         }
     }
