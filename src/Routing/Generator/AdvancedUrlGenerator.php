@@ -186,6 +186,10 @@ class AdvancedUrlGenerator extends CompiledUrlGenerator
             $isHttpsEnv = strtobool($_ENV["HTTPS"] ?? "off");
             
             $host = $route->getHost() ? $route->getHost() : self::$router->getHost();
+            // The router's host may come with its scheme ("https://localhost"): cut at the first
+            // colon, it left "https" as the host - url() answered https://https/... wherever no
+            // request gives the host again (a test, a command, a worker).
+            $host = preg_replace('#^[a-z][a-z0-9+.-]*://#i', '', $host);
             $host = explode(":", $host)[0]; // Force removing port from host..
             $this->getContext()->setHost($host);
 
