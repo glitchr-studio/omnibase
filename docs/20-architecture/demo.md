@@ -155,6 +155,15 @@ when@demo:
 
 The sessions open at that moment end: the accounts are new rows.
 
+**Give the demonstration storages of its own** (`when@demo` in
+`flysystem.yaml`: `var/storage/demo/uploads`...), name that directory in
+`purge`, and turn the orphan search off (`orphans: false`): everything a
+visitor sent is then in one place that no other environment writes to. The
+orphan search reads the uploads through `public/uploads`, a link that points
+at the storage of whichever environment cleared its cache last - right on a
+server that runs the demonstration alone, not on a machine that runs dev from
+the same checkout.
+
 ## The safeguards
 
 | | In `demo` |
@@ -179,7 +188,9 @@ to a transport cannot reach anyone. An application still sets
 `framework.mailer.dsn: 'null://null'` under `when@demo`, so that nothing is
 even attempted by a library that would bypass Symfony's mailer.
 
-What would have gone is in the log:
+What would have gone is in the log, at the `info` level of the `demo`
+channel (production's `fingers_crossed` handler keeps it for the context of
+an error; `bin/console ... -vv` shows it):
 
 ```
 demo.INFO: Demonstration: e-mail not sent. {"to":["patient@example.org"],"subject":"Votre rendez-vous","queued":false}

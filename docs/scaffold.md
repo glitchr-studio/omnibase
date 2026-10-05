@@ -340,26 +340,52 @@ so the line checks:
 30  3  * * *  [ "$APP_ENV" = demo ] && php /srv/app/bin/console demo:reset >> /srv/app/var/log/cron.demo-reset.log 2>&1
 ```
 
+**`config/packages/flysystem.yaml`** - the demonstration's files in
+directories of its own, which `demo:reset` empties: nothing of another
+environment is ever there (a development machine runs both from one checkout):
+
+```yaml
+when@demo:
+    flysystem:
+        storages:
+            local.uploads: { local: { directory: '%kernel.project_dir%/var/storage/demo/uploads' } }
+            local.wysiwyg: { local: { directory: '%kernel.project_dir%/var/storage/demo/wysiwyg' } }
+            # and every other storage visitors write to (omnibase/office's local.share...)
+```
+
+```yaml
+# config/packages/base.yaml, under when@demo's base.demo
+            reset:
+                purge: ['%kernel.project_dir%/var/storage/demo']
+                orphans: false     # everything is in the directory above: no search among the uploads
+```
+
 **`Makefile`**:
 
 ```make
-## Configure environment for the demonstration (production's behaviour, <database>_demo)
+## Configure environment for the demonstration (production's behaviour, the database <name>_demo)
 env-demo:
 	@APP_ENV=demo APP_DEBUG=0 $(MAKE) env
 
-## Create the demonstration's database, its schema and its fixtures
+## Create the demonstration's database (<name>_demo), its schema and its fixtures
 database-demo:
-	@$(DOCKER_DATABASE) sh -c 'mysql -uroot -p"$$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS \`$(MYSQL_DATABASE)_demo\`; GRANT ALL ON \`$(MYSQL_DATABASE)_demo\`.* TO \"$(MYSQL_USER)\"@\"%\";"'
+	@$(DOCKER_DATABASE) mysql -h localhost -u root -p$(MYSQL_ROOT_PASSWORD) -e "CREATE DATABASE IF NOT EXISTS $(MYSQL_DATABASE)_demo; GRANT ALL ON $(MYSQL_DATABASE)_demo.* TO '$(MYSQL_USER)'@'%'; FLUSH PRIVILEGES;"
 	@$(DOCKER_WEB) php bin/console doctrine:migrations:migrate --env=demo --no-debug --no-interaction
 	@$(DOCKER_WEB) php bin/console doctrine:fixtures:load --env=demo --no-debug --no-interaction
 ```
 
-**The key pair** - `#[Vault]` seals with the environment's pair
-([Sealed fields](20-architecture/vault.md)): `secrets:generate-keys
---env=demo` (see [Secrets](#secrets)), both files committed as for dev and
-test - a demonstration's data protects nothing real. The one real secret of
-a demonstration, `DEMO_SUPERADMIN_PASSWORD`, therefore never goes in that
-vault: `.env.demo.local` or a real variable.
+**The keys** - what the fixtures need to seal (omnibase/office's
+`SHARE_MASTER_KEY`, omnibase/mailbox's `MAILBOX_KEY`) is given in `.env.demo`
+as **demonstration keys, known to everyone and used nowhere else**, as
+`.env.test` does (base64 of `demo-key-demo-key-demo-key-00001`): what they
+seal is the fixtures' fictional data, emptied every night. The one real
+secret of a demonstration, `DEMO_SUPERADMIN_PASSWORD`, is the server's:
+`.env.demo.local`, a real variable, or the demo vault (`secrets:generate-keys
+--env=demo` then `secrets:set DEMO_SUPERADMIN_PASSWORD --env=demo`, see
+[Secrets](#secrets); its private key stays on the server, as production's -
+`.gitignore`: `config/secrets/demo*/demo*.decrypt.private.php`). That key
+pair is also what `#[Vault]` needs if the super-administrator types API keys
+in the demonstration's back office ([Sealed fields](20-architecture/vault.md)).
 
 **The templates** - one line each:
 
@@ -385,6 +411,13 @@ Then:
 make env-demo && make up       # production's stack, APP_ENV=demo
 make database-demo             # once
 ```
+
+On a development machine, to look at it without leaving the dev stack: the
+web container alone in demo, by an override of two lines
+(`services: { web: { environment: { APP_ENV: demo, APP_DEBUG: "0" } } }`,
+`docker compose ... -f that-file.yml up -d web`), then `make database-demo`;
+`make up` brings dev back. The links `public/uploads` and `public/images`
+follow whichever environment cleared its cache last.
 
 ## What a new site no longer copies
 
