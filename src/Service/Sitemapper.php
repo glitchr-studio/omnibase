@@ -4,12 +4,11 @@ namespace Base\Service;
 
 use Base\Attributes\Attribute\Sitemap;
 use Base\Attributes\AttributeReader;
-use Base\Exception\SitemapNotFoundException;
 use Base\Routing\AdvancedRouterInterface;
 use Base\Service\Model\SitemapEntry;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mime\MimeTypes;
-use Symfony\Component\Routing\Exception\RouteNotFoundException;
 use Symfony\Component\Routing\Route;
 use Symfony\Component\Routing\Router;
 use Twig\Environment;
@@ -48,12 +47,15 @@ class Sitemapper implements SitemapperInterface
     protected string $hostname = "";
     protected array $urlset = [];
 
-    public function __construct(Environment $twig, AttributeReader $attributeReader, AdvancedRouterInterface $router, LocalizerInterface $localizer)
+    protected ?LoggerInterface $logger;
+
+    public function __construct(Environment $twig, AttributeReader $attributeReader, AdvancedRouterInterface $router, LocalizerInterface $localizer, ?LoggerInterface $logger = null)
     {
         $this->twig = $twig;
         $this->router = $router;
         $this->localizer = $localizer;
         $this->attributeReader = $attributeReader;
+        $this->logger = $logger;
 
         $this->mimeTypes = new MimeTypes();
     }
@@ -69,11 +71,22 @@ class Sitemapper implements SitemapperInterface
         // "::method" - so this destructuring warned "Undefined array key 1",
         // and in an environment that turns warnings into exceptions that is a
         // 500 on /sitemap.xml, the one URL robots.txt points a crawler at.
-        $parts = explode("::", $controller, 2);
-        $class = $parts[0];
-        $method = $parts[1] ?? "__invoke";
+        //
+        // And a controller is not always a string: a route declared in PHP may
+        // give [Class::class, 'method'] - explode() died on the array, the same
+        // 500 for the whole sitemap - or a closure, which carries no attribute.
+        if (is_array($controller)) {
+            $class = is_object($controller[0] ?? null) ? $controller[0]::class : ($controller[0] ?? null);
+            $method = $controller[1] ?? "__invoke";
+        } elseif (is_string($controller)) {
+            $parts = explode("::", $controller, 2);
+            $class = $parts[0];
+            $method = $parts[1] ?? "__invoke";
+        } else {
+            return null;
+        }
 
-        if (!class_exists($class)) {
+        if (!is_string($class) || !is_string($method) || !class_exists($class)) {
             return null;
         }
 
@@ -95,10 +108,24 @@ class Sitemapper implements SitemapperInterface
         return $this;
     }
 
+    /**
+     * One page into the sitemap: a route (its name, or the Route) and the
+     * parameters of the page.
+     *
+     * Nothing here is fatal. A route that does not exist, an address that
+     * matches nothing, a route whose action carries no #[Sitemap]: the page
+     * is left out and the reason logged (warning, "sitemap" in the message).
+     * One listener registering a route nobody declared used to throw, and
+     * the whole /sitemap.xml - every other page of the site with it -
+     * answered 500.
+     */
     public function register(string|Route $routeOrName, array $routeParameters = [], ?string $lastMod = null): self
     {
         if (is_string($routeOrName)) {
             $route = $this->router->getRoute($routeOrName);
+            if (!$route) {
+                return $this->skipped(sprintf('route "%s" does not exist', $routeOrName));
+            }
         } else {
             $route = $routeOrName;
         }
@@ -123,7 +150,13 @@ class Sitemapper implements SitemapperInterface
 
         $sitemap = $this->getSitemap($route);
         if (!$sitemap) {
-            throw new SitemapNotFoundException("Sitemap attribute not found for \"" . ($routeMatch["_controller"] ?? $route->getPath()) . "\".");
+            $controller = $routeMatch["_controller"] ?? $route->getDefault("_controller") ?? $route->getPath();
+
+            return $this->skipped(sprintf(
+                'no #[Sitemap] on "%s" (%s)',
+                is_array($controller) ? implode("::", array_map(fn($c) => is_object($c) ? $c::class : (string) $c, $controller)) : (is_object($controller) ? $controller::class : (string) $controller),
+                is_string($routeOrName) ? 'route "' . $routeOrName . '"' : $route->getPath()
+            ));
         }
 
         $routeName = $sitemap->getGroup() ?? $route->getDefaults()["_canonical_route"] ?? $routeMatch["_route"] ?? null;
@@ -169,11 +202,28 @@ class Sitemapper implements SitemapperInterface
     {
         $routeParameters = $this->router->getRouteMatch($url);
         if (!$routeParameters) {
-            throw new RouteNotFoundException("Route \"$url\" not found.");
+            return $this->skipped(sprintf('no route matches "%s"', $url));
         }
 
         return $this->register($routeParameters["_route"], $routeParameters, $lastMod);
     }
+
+    /**
+     * A page left out of the sitemap, said once per reason and per request
+     * (a listener registers the same route for every record it has).
+     */
+    protected function skipped(string $reason): self
+    {
+        if (!isset($this->skipped[$reason])) {
+            $this->skipped[$reason] = true;
+            $this->logger?->warning('Sitemap: page left out, ' . $reason . '.');
+        }
+
+        return $this;
+    }
+
+    /** @var array<string, true> the reasons already logged */
+    protected array $skipped = [];
 
     public function registerAttributes(): self
     {
@@ -190,10 +240,7 @@ class Sitemapper implements SitemapperInterface
             ));
 
             if (!$variables) {
-                try {
-                    $this->register($route);
-                } catch (SitemapNotFoundException $e) {
-                }
+                $this->register($route);
 
                 continue;
             }
@@ -220,10 +267,7 @@ class Sitemapper implements SitemapperInterface
             }
 
             foreach (self::combine($choices) as $routeParameters) {
-                try {
-                    $this->register($route, $routeParameters);
-                } catch (SitemapNotFoundException $e) {
-                }
+                $this->register($route, $routeParameters);
             }
         }
 

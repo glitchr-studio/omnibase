@@ -13,6 +13,7 @@ An application or an `omnibase/*` bundle uses these; it does not keep a copy.
 | Opening hours, special days, per place, JSON-LD | `Base\Entity\Hours\*`, `Base\Service\OpeningHours` | [Opening hours](opening-hours.md) |
 | JSON-LD `LocalBusiness` (address, phone, hours) | `Base\Service\LocalBusiness`, Twig `local_business_jsonld()` | [LocalBusiness JSON-LD](local-business.md) |
 | Redirections of a site's old addresses | `Base\Entity\Layout\Redirection`, `Base\Service\Redirections` | [Redirections](redirections.md) |
+| The sitemap: declared routes, the pages of records | `#[Sitemap]`, `Base\Service\Sitemapper`, `SitemapEvent` | [Sitemap](sitemap.md) |
 | ICS file, Google Calendar link | `Base\Service\Calendar\{CalendarEntry, Ics, GoogleCalendarLink}` | [Calendar](calendar.md) |
 | Invitation by token | `Base\Entity\User\Invitation`, `Base\Service\Invitations` | [Invitations](invitations.md) |
 | Signed download links | `Base\Service\DownloadLinks` | [Downloads and QR codes](downloads-and-qr.md) |

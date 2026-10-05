@@ -182,6 +182,8 @@ return static function (ContainerConfigurator $container): void {
             new Reference('base.attribute_reader'),
             new Reference('advanced_router'),
             new Reference('localizer'),
+            // A page left out of the sitemap is said here (Sitemapper::register()).
+            new Reference('logger', ContainerInterface::NULL_ON_INVALID_REFERENCE),
         ]);
 
 
