@@ -45,6 +45,17 @@ class ContactModel extends AbstractModel
     #[Uploader(max_size: "5MB", mime_types: ["image/*"])]
     public array $attachments = [];
 
+    /**
+     * A form sent with no file hands null to its model, not an empty list:
+     * written straight into the property, that null stopped the request
+     * ("Cannot assign null to property ... of type array") on every message
+     * without an attachment.
+     */
+    public function setAttachments(?array $attachments): void
+    {
+        $this->attachments = $attachments ?? [];
+    }
+
     /** The trap was filled: thank it all the same, and send nothing. */
     public function isRobot(): bool
     {
