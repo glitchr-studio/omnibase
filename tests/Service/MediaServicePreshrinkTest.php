@@ -12,7 +12,8 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * MediaService::preshrink() - the photo is brought down to twice its future
- * thumbnail BEFORE strip() converts its colour profile. strip() on the
+ * thumbnail (or, when it is less than three times that thumbnail, to its
+ * very size) BEFORE strip() converts its colour profile. strip() on the
  * full-size source was 3 of the 4 seconds a 12-megapixel photo took to
  * become a 500px thumbnail, and an album asks for dozens at once.
  *
@@ -74,13 +75,39 @@ class MediaServicePreshrinkTest extends TestCase
         $this->assertSame([4000, 3000], $this->preshrink($this->photo(4000, 3000), $filters));
     }
 
-    public function testASourceAlreadyCloseToTheThumbnailIsLeftAlone(): void
+    public function testASourceCloseToTheThumbnailGetsItsSizeAtOnce(): void
     {
         $filters = [new BitmapFilter(null, [], [new ThumbnailFilter(500, 500)])];
 
-        // 1200px on the shorter side is 1.2x the 2x target: not worth a pass
-        $this->assertSame([1600, 1200], $this->preshrink($this->photo(1600, 1200), $filters));
+        // 1200px on the shorter side is 1.2x the 2x target: no cheap pass, the
+        // thumbnail's own resize is done before the colour conversion instead
+        $this->assertSame([500, 375], $this->preshrink($this->photo(1600, 1200), $filters));
+        // the album's large view of a 12-megapixel photo, which took 5 s
+        $this->assertSame([2000, 1500], $this->preshrink($this->photo(4000, 3000), [new BitmapFilter(null, [], [new ThumbnailFilter(2000, 2000)])]));
+        $this->assertSame([1500, 2000], $this->preshrink($this->photo(3000, 4000), [new BitmapFilter(null, [], [new ThumbnailFilter(2000, 2000)])]));
+    }
+
+    public function testACroppingThumbnailKeepsEnoughToCoverItsBox(): void
+    {
+        $filters = [new BitmapFilter(null, [], [new ThumbnailFilter(2000, 2000, ImageInterface::THUMBNAIL_OUTBOUND)])];
+
+        // outbound fills the box and crops: the shorter side is the one that reaches it
+        $this->assertSame([2667, 2000], $this->preshrink($this->photo(4000, 3000), $filters));
+    }
+
+    public function testAPhotoIsNeverEnlarged(): void
+    {
+        $filters = [new BitmapFilter(null, [], [new ThumbnailFilter(500, 500)])];
+
         $this->assertSame([400, 300], $this->preshrink($this->photo(400, 300), $filters));
+        $this->assertSame([500, 375], $this->preshrink($this->photo(500, 375), $filters));
+    }
+
+    public function testASideLeftToTheRatioIsTheFiltersBusiness(): void
+    {
+        $filters = [new BitmapFilter(null, [], [new ThumbnailFilter(2000, null)])];
+
+        $this->assertSame([4000, 3000], $this->preshrink($this->photo(4000, 3000), $filters));
     }
 
     public function testAnAnimatedImageIsLeftAlone(): void

@@ -21,6 +21,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Profiler\Profiler;
 
 use Imagine\Filter\FilterInterface;
+use Imagine\Image\Box;
 use Imagine\Image\ImageInterface;
 use Imagine\Image\ImagineInterface;
 use InvalidArgumentException;
@@ -946,6 +947,10 @@ class MediaService extends FileService implements MediaServiceInterface
      * conversion that follows gives the same colours), never for an animated
      * image, and never below twice the requested size on the shorter side -
      * the thumbnail filter still does the final, good-quality resize.
+     *
+     * A photo less than three times its thumbnail gets that thumbnail's size
+     * straight away instead (see below): the same resize, done before the
+     * conversion rather than after it.
      */
     private function preshrink(ImageInterface $image, array $filters): void
     {
@@ -981,9 +986,27 @@ class MediaService extends FileService implements MediaServiceInterface
         $width  = $imagick->getImageWidth();
         $height = $imagick->getImageHeight();
         $factor = min($width, $height) / (2 * $target);
-        if ($factor < 1.5) return; // not worth a pass
+        if ($factor >= 1.5) {
+            $imagick->scaleImage((int) round($width / $factor), (int) round($height / $factor));
+            return;
+        }
 
-        $imagick->scaleImage((int) round($width / $factor), (int) round($height / $factor));
+        // Too close to the source for the cheap pass - the 2000px view of a
+        // 4000px photo, which still took 5 s. The thumbnail's own resize is
+        // then done here, with its good filter, so that strip() converts the
+        // result and not the source; the thumbnail filter finds the image at
+        // its size and has nothing left to resample. Inset: the size it fits
+        // in. Outbound (it crops): the size that still covers the box.
+        $boxWidth  = (int) $thumbnail->getWidth();
+        $boxHeight = (int) $thumbnail->getHeight();
+        if ($boxWidth <= 0 || $boxHeight <= 0) return; // one side left to the ratio: the filter's business
+
+        $mode   = (int) $thumbnail->getMode();
+        $ratios = [$boxWidth / $width, $boxHeight / $height];
+        $scale  = ($mode & 0xffff) === ImageInterface::THUMBNAIL_OUTBOUND ? max($ratios) : min($ratios);
+        if ($scale >= 1) return; // already within the box: never enlarge
+
+        $image->resize(new Box(max(1, (int) round($width * $scale)), max(1, (int) round($height * $scale))));
     }
 
     /**
