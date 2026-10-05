@@ -3,6 +3,9 @@
 namespace Tests\Base\Field;
 
 use Base\Field\FieldValueResolver;
+use Doctrine\Persistence\ManagerRegistry;
+use Doctrine\Persistence\Mapping\ClassMetadata;
+use Doctrine\Persistence\ObjectManager;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -258,6 +261,68 @@ class FieldValueResolverIdentifierTest extends TestCase
     {
         $this->assertSame(['slug', 'uuid'], FieldValueResolver::DEFAULT_IDENTIFIER_FIELDS);
     }
+
+    // -- a field that is not a column -------------------------------------
+
+    /**
+     * Doctrine as the resolver sees it: IdentifierParentFixture and its
+     * child are entities with the given columns, nothing else is managed.
+     *
+     * @param string[] $columns
+     */
+    private function doctrine(array $columns): ManagerRegistry
+    {
+        $metadata = $this->createMock(ClassMetadata::class);
+        $metadata->method('hasField')->willReturnCallback(fn (string $field) => in_array($field, $columns, true));
+
+        $manager = $this->createMock(ObjectManager::class);
+        $manager->method('getClassMetadata')->willReturn($metadata);
+
+        $doctrine = $this->createMock(ManagerRegistry::class);
+        $doctrine->method('getManagerForClass')->willReturnCallback(
+            fn (string $class) => is_a($class, IdentifierParentFixture::class, true) ? $manager : null
+        );
+
+        return $doctrine;
+    }
+
+    /**
+     * getSlug() computed from the title, no slug column (a scholar's
+     * Publication): the address made of it could not be looked up again -
+     * /admin/publications/2/edit redirected to a slug that answered 404.
+     */
+    public function testAComputedSlugIsNotAnIdentifier(): void
+    {
+        $resolver = new FieldValueResolver(null, null, [], false, $this->doctrine(['id', 'title']));
+
+        $this->assertSame(14, $resolver->entityIdentifier(new IdentifierComputedSlugFixture()));
+    }
+
+    public function testAStoredSlugStillIs(): void
+    {
+        $resolver = new FieldValueResolver(null, null, [], false, $this->doctrine(['id', 'title', 'slug']));
+
+        $this->assertSame('acid-sensitive-photoswitches', $resolver->entityIdentifier(new IdentifierComputedSlugFixture()));
+    }
+
+    public function testTheNextStoredFieldIsTakenInstead(): void
+    {
+        $resolver = new FieldValueResolver(null, ['slug', 'username'], [], false, $this->doctrine(['id', 'username']));
+
+        $this->assertSame('marki', $resolver->entityIdentifier(new IdentifierComputedSlugFixture()));
+    }
+
+    public function testAnObjectDoctrineDoesNotManageKeepsItsAccessors(): void
+    {
+        $resolver = new FieldValueResolver(null, null, [], false, $this->doctrine([]));
+
+        $this->assertSame('my-article', $resolver->entityIdentifier($this->article()));
+    }
+}
+
+class IdentifierComputedSlugFixture extends IdentifierParentFixture
+{
+    public function getSlug(): string { return 'acid-sensitive-photoswitches'; }
 }
 
 class IdentifierParentFixture

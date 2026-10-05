@@ -4,6 +4,7 @@ namespace Base\Field;
 
 use Base\Entity\Layout\ImageInterface;
 
+use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
 
@@ -31,12 +32,14 @@ class FieldValueResolver
      * @param string[]|null                 $identifierFields         null = DEFAULT_IDENTIFIER_FIELDS
      * @param array<class-string, string[]> $identifierFieldsByEntity per-class overrides
      * @param bool                          $lowercaseIdentifiers     see $this->lowercaseIdentifiers
+     * @param ManagerRegistry|null          $doctrine                 says which identifier fields are columns, see isStoredField()
      */
     public function __construct(
         ?PropertyAccessorInterface $accessor = null,
         ?array $identifierFields = null,
         array $identifierFieldsByEntity = [],
         bool $lowercaseIdentifiers = false,
+        protected ?ManagerRegistry $doctrine = null,
     ) {
         $this->lowercaseIdentifiers = $lowercaseIdentifiers;
         $this->accessor = $accessor ?? PropertyAccess::createPropertyAccessorBuilder()
@@ -260,12 +263,17 @@ class FieldValueResolver
      *   "12345" (the username validator allows digits-only) would link to
      *   whichever account holds id 12345 - someone else's. Falling through
      *   to the real id keeps the URL unambiguous by construction.
+     *
+     * And a field the entity does not STORE is not a candidate at all: a
+     * getSlug() computed from the title (no column behind it) reads well but
+     * cannot be looked up again - the address it gave answered 404. Such an
+     * entity is linked by its id (isStoredField()).
      */
     public function entityIdentifier(object $entity): string|int|null
     {
         foreach ($this->identifierFieldsFor($entity) as $field) {
             $method = 'get' . ucfirst($field);
-            if (!method_exists($entity, $method)) {
+            if (!method_exists($entity, $method) || !$this->isStoredField($entity, $field)) {
                 continue;
             }
 
@@ -277,6 +285,31 @@ class FieldValueResolver
         }
 
         return method_exists($entity, 'getId') ? $entity->getId() : null;
+    }
+
+    /**
+     * Whether a record can be found again by this field: it is a column of
+     * the entity (Doctrine's metadata of the object's own class, inherited
+     * fields included) - what the back office's lookup asks before querying
+     * by it (AbstractCrudController::findEntity()). An accessor without a
+     * column - computed, or read from a translation - is not.
+     *
+     * Without Doctrine at hand, or for an object it does not manage, the
+     * accessor is trusted as before: nothing here can tell.
+     */
+    protected function isStoredField(object $entity, string $field): bool
+    {
+        if (null === $this->doctrine) {
+            return true;
+        }
+
+        try {
+            $manager = $this->doctrine->getManagerForClass($entity::class);
+        } catch (\Throwable) {
+            return true;
+        }
+
+        return null === $manager || $manager->getClassMetadata($entity::class)->hasField($field);
     }
 
     /**
