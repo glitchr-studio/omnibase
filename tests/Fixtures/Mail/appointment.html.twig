@@ -1,0 +1,5 @@
+{% extends '@Base/notifier/email.html.twig' %}
+{% block subject %}
+    Your appointment of {{ day }} &amp; after
+{% endblock %}
+{% block content %}<p>See you at {{ hour }}.</p>{% endblock %}

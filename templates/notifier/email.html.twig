@@ -1,3 +1,28 @@
+{#
+ # omnibase's e-mail frame. A notification renders it with its own context; a
+ # plain TemplatedEmail may extend it as well, giving nothing but its blocks:
+ #
+ #     {% extends '@Base/notifier/email.html.twig' %}
+ #     {% block subject %}Your appointment{% endblock %}
+ #     {% block content %}<p>...</p>{% endblock %}
+ #
+ # Every variable has a default (it used to stop on "Variable importance does
+ # not exist"), the subject is the `subject` variable or the `subject` block,
+ # and the logo is printed only when there is one: the `logo` variable, else
+ # the back office's setting (base.settings.logo.email, then base.settings.logo).
+ #}
+{%- set importance = importance ?? null -%}
+{%- set markdown = markdown ?? false -%}
+{%- set raw = raw ?? false -%}
+{%- set content = content ?? '' -%}
+{%- set action_url = action_url ?? null -%}
+{%- set action_text = action_text ?? action_url -%}
+{%- set exception = exception ?? false -%}
+{%- if (subject is not defined or subject is empty) and block('subject') is defined -%}
+    {%- set subject = block('subject')|striptags|trim -%}
+{%- endif -%}
+{%- set subject = subject ?? '' -%}
+{%- set logo = logo ?? app.email.logo ?? null -%}
 {% apply inky_to_html|inline_css %}
 <html>
 <head>
@@ -21,6 +46,15 @@
 <wrapper class="body">
     <container class="body_{{ ("urgent" == importance ? "alert" : ("high" == importance ? "warning" : "default")) }}">
         <spacer size="16"></spacer>
+        {% block header %}
+            {% if logo is not empty %}
+            <row>
+                <columns large="12" small="12" class="header logo">
+                    <img src="{{ embed(logo) }}" alt="{{ app.email.title ?? '' }}" style="max-height: 64px; width: auto;">
+                </columns>
+            </row>
+            {% endif %}
+        {% endblock %}
         <row>
             <columns large="12" small="12">
                 {% block lead %}
