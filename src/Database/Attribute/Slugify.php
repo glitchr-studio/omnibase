@@ -26,6 +26,12 @@ class Slugify extends AbstractAttribute implements ExtensionOptionInterface
     protected ?array $keep;
     protected bool $sync;
 
+    /**
+     * Unique among the entities of the same class only, in a hierarchy that
+     * shares the column (Taxon: a menu's "desserts" and a blog's "desserts").
+     */
+    protected bool $perType;
+
     protected string $separator;
     protected ?string $referenceColumn;
 
@@ -38,9 +44,11 @@ class Slugify extends AbstractAttribute implements ExtensionOptionInterface
         array $keep = [],
         bool $capital = false,
         ?string $locale = null,
-        ?array $map = null)
+        ?array $map = null,
+        bool $perType = false)
     {
         $this->referenceColumn = $reference;
+        $this->perType = $perType;
 
         $this->unique = $unique;
         $this->sync = $sync;
@@ -91,6 +99,9 @@ class Slugify extends AbstractAttribute implements ExtensionOptionInterface
             $propertyDeclarer = property_declarer($entity, $property);
             $propertyDeclarer2 = property_declarer($entity2, $property);
             if ($propertyDeclarer != $propertyDeclarer2 && !is_instanceof($propertyDeclarer, $propertyDeclarer2)) {
+                continue;
+            }
+            if ($this->perType && $this->typeOf($entity) !== $this->typeOf($entity2) && !$this->columnIsStillUniqueAlone($entity, $property)) {
                 continue;
             }
 
@@ -171,13 +182,77 @@ class Slugify extends AbstractAttribute implements ExtensionOptionInterface
             return $slug;
         }
 
-        for ($i = 2; ( $persistentEntity = $repository->findOneBy([$property => $slug]) ) || in_array($slug, $invalidSlugs); ++$i) {
+        for ($i = 2; ( $persistentEntity = $this->findHolder($repository, $entity, $property, $slug) ) || in_array($slug, $invalidSlugs); ++$i) {
 
             if($persistentEntity === $entity ) break;
             $slug = $defaultSlug . $this->separator . $i;
         }
 
         return $slug;
+    }
+
+    /**
+     * Who already holds this slug: any entity of the column's owner, or -
+     * perType - one of the very class of the entity being saved.
+     */
+    protected function findHolder($repository, $entity, string $property, string $slug): ?object
+    {
+        if (!$this->perType || $this->columnIsStillUniqueAlone($entity, $property)) {
+            return $repository->findOneBy([$property => $slug]);
+        }
+
+        $type = $this->typeOf($entity);
+        $same = null;
+        foreach ($repository->findBy([$property => $slug]) as $holder) {
+            if ($holder === $entity) {
+                return $holder;
+            }
+            if ($this->typeOf($holder) === $type) {
+                $same ??= $holder;
+            }
+        }
+
+        return $same;
+    }
+
+    /** @var array<string, bool> */
+    protected static array $uniqueAlone = [];
+
+    /**
+     * Whether the database still holds the unique index of before on the
+     * column alone: an application that has not run its migration yet keeps
+     * slugs unique for all types (a second "desserts" would be refused by
+     * that index), and gets them per type once the index is gone. Asked once
+     * per process and table.
+     */
+    protected function columnIsStillUniqueAlone(object $entity, string $property): bool
+    {
+        try {
+            $classMetadata = $this->getClassMetadata(property_declarer($entity, $property));
+            $table = $classMetadata->getTableName();
+            $column = $classMetadata->getColumnName($property);
+            $key = $table . "." . $column;
+            if (array_key_exists($key, self::$uniqueAlone)) {
+                return self::$uniqueAlone[$key];
+            }
+
+            self::$uniqueAlone[$key] = false;
+            $schemaManager = $this->getEntityManager()->getConnection()->createSchemaManager();
+            foreach ($schemaManager->listTableIndexes($table) as $index) {
+                if ($index->isUnique() && !$index->isPrimary() && array_map('strtolower', $index->getUnquotedColumns()) === [strtolower($column)]) {
+                    self::$uniqueAlone[$key] = true;
+                }
+            }
+
+            return self::$uniqueAlone[$key];
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    protected function typeOf(object $entity): string
+    {
+        return $entity instanceof \Doctrine\Persistence\Proxy ? get_parent_class($entity) : get_class($entity);
     }
 
     /**

@@ -26,6 +26,11 @@ use Symfony\Component\HttpFoundation\File\File;
 #[Cache(usage: "NONSTRICT_READ_WRITE", associations:"ALL")]
 #[ORM\DiscriminatorColumn(name: "class", type: "string")]
 #[DiscriminatorEntry(value: "abstract")]
+// A slug is unique among the taxa of one type: a menu's section and a blog's
+// category may both be "desserts". (It was unique on the whole table, shared
+// by every type, and the second one became "desserts-2".)
+#[ORM\UniqueConstraint(name: "thread_taxon_type_slug", columns: ["class", "slug"])]
+#[ORM\Index(name: "thread_taxon_slug", columns: ["slug"])]
 class Taxon implements TranslatableInterface, IconizeInterface, GraphInterface
 {
     use TranslatableTrait;
@@ -68,8 +73,8 @@ class Taxon implements TranslatableInterface, IconizeInterface, GraphInterface
         return $this->id;
     }
 
-    #[ORM\Column(length:255, unique:true)]
-    #[Slugify(reference:"translations.label")]
+    #[ORM\Column(length:255)]
+    #[Slugify(reference:"translations.label", perType: true)]
     protected $slug;
 
     public function getSlug(): ?string

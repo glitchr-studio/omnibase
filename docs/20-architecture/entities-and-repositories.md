@@ -59,3 +59,29 @@ page's language; `{{ code|country_name('de') }}` in the one given
 (`Localizer::getCountryName()`, on `symfony/intl`). `JP` is "Japon" on a French
 page; alpha-3 (`JPN`) is read too; an unknown code is printed as it is. The
 country of a locale (`fr-BE` → "Belgium") is `|locale_country_name`.
+
+## A taxon's slug is unique per type
+
+`Base\Entity\Thread\Taxon` is the root of a JOINED hierarchy: a FAQ's
+`Section`, a classroom's `Subject`, a menu's `MenuSection`, a site's own
+`Category` all share the table `threadTaxon` and its `slug` column. The slug
+is unique **among the taxa of one type** - the unique index is on
+`(class, slug)`, `class` being the discriminator - so a menu's section and a
+blog's category may both be `desserts`. (It was unique on the column alone:
+the second one became `desserts-2`, whatever its type.)
+
+`#[Slugify(reference: 'translations.label', perType: true)]` is what numbers
+a slug only against the entities of the same class; any hierarchy that shares
+a slug column may use it.
+
+**The migration an application generates** after updating omnibase
+(`bin/console doctrine:migrations:diff`), on `threadTaxon`: the unique index
+on `slug` is dropped, a unique index `thread_taxon_type_slug` on
+`(class, slug)` and a plain index `thread_taxon_slug` on `slug` are created.
+No row changes; the new constraint is weaker than the old one, so it always
+applies. Until that migration has run, omnibase sees the old index and keeps
+numbering slugs for all types together: nothing fails in between.
+
+A taxon is found by its slug through the repository of its type
+(`SectionRepository::findOneBySlug()`): `TaxonRepository` itself may now find
+several types under one slug.
