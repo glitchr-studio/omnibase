@@ -671,7 +671,10 @@ class BaseConfiguration extends AbstractBaseConfiguration
                     ->arrayNode('two_factor')->addDefaultsIfNotSet()
                         ->children()
                             ->arrayNode('required_roles')
-                                ->info('Roles whose holders must have a second factor (directly or through the role hierarchy), e.g. [ROLE_STAFF]. Empty: the administrator\'s "mandatory for everyone" setting alone decides.')
+                                ->info('Roles whose holders must have a second factor (directly or through the role hierarchy), e.g. [ROLE_STAFF]. Empty: the administrator\'s "mandatory for everyone" setting alone decides. A later definition (when@dev, when@test, another file) replaces the list, it does not add to it.')
+                                // A list is merged by appending: when@test's [] left the base list as it was, and
+                                // when@dev's [ROLE_ADMIN] gave [ROLE_STAFF, ROLE_ADMIN]. The last definition is the list.
+                                ->performNoDeepMerging()
                                 ->scalarPrototype()->end()
                                 ->defaultValue([])
                                 ->end()

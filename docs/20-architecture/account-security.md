@@ -37,6 +37,22 @@ base:
             postpone: true                 # false: no "not now" on the enrolment prompt
 ```
 
+The list is one value: defined again - in the file's `when@dev` or
+`when@test` block, or in another file - the later definition **replaces** it
+(Symfony would append the items of a list; this one opts out), so an
+environment can require it of other roles, or of none:
+
+```yaml
+when@test:
+    base:
+        security:
+            two_factor:
+                required_roles: []         # nobody is sent to the enrolment page in the tests
+```
+
+A definition that does not name `required_roles` (only `postpone`, say) keeps
+the list as it was.
+
 An account holding one of these roles and no second factor is sent to
 `/settings/security-required` (`user_settings_enrolment`) by
 `SecurityEnrolmentSubscriber` - on a plain page load only: a form post, an
