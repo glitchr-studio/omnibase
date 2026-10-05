@@ -340,12 +340,18 @@ namespace {
      */
     function symlink_atomic(string $target, string $link): bool
     {
-        if (is_link($link)) {
+        // One look at what is there (lstat: the link itself, not what it points to). Asked in two
+        // steps - is_link(), then file_exists() - a link another process put in between the two
+        // was taken for a directory in its place.
+        clearstatcache(true, $link);
+        $stat = @lstat($link);
+        if (false !== $stat) {
+            if (0120000 !== ($stat['mode'] & 0170000)) {
+                return false;
+            }
             if (@readlink($link) === $target) {
                 return true;
             }
-        } elseif (file_exists($link)) {
-            return false;
         }
 
         $temporary = $link . "." . bin2hex(random_bytes(6)) . ".tmp";

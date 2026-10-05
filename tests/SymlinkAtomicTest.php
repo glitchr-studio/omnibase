@@ -67,16 +67,16 @@ class SymlinkAtomicTest extends TestCase
     {
         $link = $this->dir.'/public';
         $code = sprintf(
-            'require %s; set_error_handler(static fn () => exit(3)); usleep(max(0, (int) ((%%F - microtime(true)) * 1e6))); exit(symlink_atomic("storage", %s) ? 0 : 2);',
+            'require %s; set_error_handler(static fn (int $no) => (error_reporting() & $no) ? exit(3) : true); usleep(max(0, (int) ((%%F - microtime(true)) * 1e6))); exit(symlink_atomic("storage", %s) ? 0 : 2);',
             var_export(\dirname(__DIR__).'/src/Resources/Functions.php', true),
             var_export($link, true)
         );
 
-        for ($round = 0; $round < 5; ++$round) {
+        for ($round = 0; $round < 12; ++$round) {
             @unlink($link);
             $at = microtime(true) + 0.3;        // they all start together
             $processes = [];
-            for ($i = 0; $i < 6; ++$i) {
+            for ($i = 0; $i < 8; ++$i) {
                 $processes[] = proc_open([\PHP_BINARY, '-r', sprintf($code, $at)], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
             }
             foreach ($processes as $process) {
