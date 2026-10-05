@@ -24,6 +24,10 @@ return static function (ContainerConfigurator $container): void {
     $services->set('Base\Subscriber\TemplatedEmailSubjectSubscriber')
         ->args([service('twig')])
         ->tag('kernel.event_subscriber');
+    // The second-level cache emptied after doctrine:fixtures:load and the like.
+    $services->set('Base\Subscriber\SecondLevelCacheConsoleSubscriber')
+        ->args([service('doctrine')->nullOnInvalid()])
+        ->tag('kernel.event_subscriber');
     $services->set('Base\Service\Calendar\Ics')->public();
     $services->set('Base\Service\Calendar\GoogleCalendarLink')->public();
     $services->set('Base\Service\Invitations')->public()

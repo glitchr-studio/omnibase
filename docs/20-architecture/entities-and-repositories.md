@@ -85,3 +85,20 @@ numbering slugs for all types together: nothing fails in between.
 A taxon is found by its slug through the repository of its type
 (`SectionRepository::findOneBySlug()`): `TaxonRepository` itself may now find
 several types under one slug.
+
+## The second-level cache after the fixtures
+
+A site that turns on Doctrine's second-level cache
+(`doctrine.orm.second_level_cache`) caches its entities by id. A command that
+rewrites the database behind the ORM's back leaves that cache wrong:
+`doctrine:fixtures:load` purges the tables with `DELETE` / `TRUNCATE`, the
+new rows are numbered from 1 again, and the cache answered yesterday's entity
+for today's id until it expired.
+
+`Base\Subscriber\SecondLevelCacheConsoleSubscriber` empties every region
+(entities, collections, queries) of every entity manager when one of these
+commands ends: `doctrine:fixtures:load`, `doctrine:schema:{drop,create,update}`,
+`doctrine:database:{drop,import}`, `doctrine:migrations:{migrate,execute}`,
+`dbal:run-sql`. Nothing to configure; `cache:pool:clear` by hand after loading
+fixtures is no longer needed. A command of your own that writes SQL directly
+calls it: `$subscriber->evict()`.
