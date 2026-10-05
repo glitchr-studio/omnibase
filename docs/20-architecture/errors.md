@@ -17,7 +17,10 @@ framework:
   (`ErrorController::Rescue()`), under the error's own status.
 - **Otherwise**: `exception.html.twig`, or `@Admin/error.html.twig` for a path
   under `/admin` when omnibase/admin is installed; the kernel gives the
-  response the error's status.
+  response the error's status. `exception.html.twig` extends the site's
+  `layout3.html.twig`, or its `layout1.html.twig` when it has no layout3
+  (until 2026-10-06 a site without layout3 could not render the page: every
+  unknown address answered 500 in prod).
 
 | What happened | Status |
 |---|---|

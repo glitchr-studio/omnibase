@@ -6,8 +6,13 @@
    preference. layout3 pages are exempt: __menu__() bails out immediately
    because it gates on #page's data-layout being "layout1" - same pattern
    already used by maintenance.html.twig/launchdate.html.twig for other
-   full-screen, nav-less pages. #}
-{% extends 'layout3.html.twig' %}
+   full-screen, nav-less pages.
+
+   A site that has no layout3 (the sites scaffolded from Apfelschule have
+   layout1 alone) is given its layout1: without a layout to extend, this page
+   could not be rendered at all, and every unknown address answered 500 in
+   place of 404 wherever debug is off (prod, demo). #}
+{% extends ['layout3.html.twig', 'layout1.html.twig'] %}
 
 {% block navbar %}{% endblock %}
 {% block flashbag %}{% endblock %}

@@ -50,6 +50,20 @@ class ProdEnvironmentHttpTest extends DemoKernelTestCase
         $this->assertNull(static::getContainer()->get('security.token_storage')->getToken()?->getUser());
     }
 
+    /**
+     * Where debug is off (prod, demo) an error is omnibase's own page, in the
+     * site's layout - layout1 when it has no layout3, as the harness and the
+     * sites scaffolded from Apfelschule: the page could not be rendered, and
+     * an unknown address answered 500.
+     */
+    public function testAnUnknownAddressAnswers404(): void
+    {
+        $response = $this->browse('/no-such-page-anywhere');
+
+        $this->assertSame(404, $response->getStatusCode());
+        $this->assertStringContainsString('404', (string) $response->getContent());
+    }
+
     public function testTheBannerPrintsNothing(): void
     {
         $twig = static::getContainer()->get('twig');
