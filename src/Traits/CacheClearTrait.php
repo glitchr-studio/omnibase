@@ -325,17 +325,17 @@ PHP;
                 continue;
             }
 
-            if (is_link($publicPath)) {
-                unlink($publicPath);
-            }
+            // Several processes clear the cache at once when a stack starts (the web
+            // container and the worker): the link is replaced in one step
+            // (symlink_atomic()), and what another process just did is not an error.
+            // unlink() then symlink() let the second one die on "symlink(): File exists".
+            $target = relative_path($realPath, dirname($publicPath));
+            if (!is_link($publicPath) && file_exists($publicPath)) {
 
-            if (file_exists($publicPath)) {
-                
                 if (is_dir($publicPath)) {
                     if (is_emptydir($publicPath)) {
-                        
-                        try { rmdir($publicPath); }
-                        catch(\Exception $exception) { 
+
+                        if (!@rmdir($publicPath) && is_dir($publicPath) && !is_link($publicPath)) {
                             exit("Directory \"$publicPath\" exists, but you don't have the permissions.");
                         }
 
@@ -343,13 +343,15 @@ PHP;
                         exit("Directory \"$publicPath\" exists and is not empty.\n");
                     }
                 } elseif (is_file($publicPath)) {
-                    unlink($publicPath);
+                    @unlink($publicPath);
                 } else {
                     exit("Cannot safely remove \"$publicPath\" — unknown file type.\n");
                 }
             }
 
-            symlink(relative_path($realPath, dirname($publicPath)), $publicPath);
+            if (!symlink_atomic($target, $publicPath)) {
+                $io->warning(sprintf('The public link "%s" could not be made (to "%s").', $publicPath, $target));
+            }
         }
     }
 }

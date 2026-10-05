@@ -329,6 +329,40 @@ namespace {
     }
 
     /**
+     * A symbolic link put in place in one step, safe when several processes do
+     * it at once (the web container and the worker both clearing the cache as
+     * they start): the link is made beside its place under a name of its own,
+     * then renamed over it - rename() replaces a link atomically, where
+     * unlink() + symlink() let the second process fail on "File exists" (or on
+     * a link that just went). An existing link to the same target is left as it is.
+     *
+     * @return bool false when the place is taken by something that is not a link (a directory, a file)
+     */
+    function symlink_atomic(string $target, string $link): bool
+    {
+        if (is_link($link)) {
+            if (@readlink($link) === $target) {
+                return true;
+            }
+        } elseif (file_exists($link)) {
+            return false;
+        }
+
+        $temporary = $link . "." . bin2hex(random_bytes(6)) . ".tmp";
+        if (!@symlink($target, $temporary)) {
+            return is_link($link) && @readlink($link) === $target;
+        }
+
+        if (!@rename($temporary, $link)) {
+            @unlink($temporary);
+
+            return is_link($link) && @readlink($link) === $target;
+        }
+
+        return true;
+    }
+
+    /**
      * @return float|int
      */
     function benchmark_start()

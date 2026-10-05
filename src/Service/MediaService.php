@@ -819,7 +819,8 @@ class MediaService extends FileService implements MediaServiceInterface
                     $prefixedRelativeCache = relative_path($prefixedCache, $prefixDir);
 
                     if(file_exists($prefixedCache) && !file_exists($prefixedRelativePath)) {
-                        symlink($prefixedRelativeCache, $prefixedRelativePath);
+                        // Two requests for the same picture: the second link is not an error
+                        symlink_atomic($prefixedRelativeCache, $prefixedRelativePath);
                     }
 
                 } catch (UnableToCreateDirectory $e) {
