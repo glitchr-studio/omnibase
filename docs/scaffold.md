@@ -24,6 +24,7 @@ longer copied because a package provides it.
 | `.editorconfig`, `.gitignore`, `.php-cs-fixer.dist.php`, `AGENTS.md` | nothing |
 | `bin/`, `public/index.php`, `src/Kernel.php`, `config/bootstrap.php`, `config/preload.php` | nothing |
 | `composer.json` | its name and description; the `require` of its bundles; path `repositories` for the packages not on Packagist yet |
+| `symfony.lock` | nothing - **it is copied with `composer.json`** (see below); `composer.lock` is not, the first `composer install` writes it |
 | `package.json`, `webpack.config.js`, `postcss.config.js` | its name; `@glitchr/stickyjs` `^1.4`, `@glitchr/transparentjs` at the commit the others pin |
 | `phpunit.xml.dist`, `tests/bootstrap.php`, `tests/Mock/NoNetwork.php` | nothing |
 | `initdb.sql` | the database name |
@@ -37,6 +38,64 @@ or `rsync` takes them along with the rest: copy from `git ls-files` (or
 site writes its own - `.env.local` by hand, `.htpasswd` with `make htpasswd`
 (the proxy mounts `./.htpasswd`: without the file Docker creates a *directory*
 of that name, and the protected hosts cannot check a password).
+
+### `symfony.lock` comes with `composer.json`
+
+`symfony.lock` is Flex's record of the recipes already applied, one entry per
+package. Without it Flex takes every package of the first `composer install`
+for a new one and **plays every recipe again**: it rewrites
+`config/bundles.php`, drops its default `config/packages/*.yaml`,
+`config/routes/*.yaml`, `.env` blocks, `src/Kernel.php`, `public/index.php`
+and `bin/console` over the files just copied from Apfelschule - the site then
+boots on Symfony's defaults instead of omnibase's configuration (or does not
+boot: two Doctrine configurations, a second security firewall).
+
+So the copy takes `symfony.lock` (it is tracked: `git ls-files` and
+`git archive` include it). After the first install, `git status` must show no
+change under `config/`; a package added later is a `composer require`, whose
+recipe adds its entry to the lock - commit it with the rest.
+
+A copy made without it is repaired before the first install: take
+Apfelschule's `symfony.lock`, remove the entries of the packages the new site
+does not require (or leave them: an entry without its package is ignored).
+If the recipes already ran, `git checkout -- config/ .env src/Kernel.php
+public/index.php bin/console` on a copy that was committed first, else copy
+those paths again.
+
+### Fonts: `@fontsource` 5.3 and its `exports`
+
+The sites install their fonts from `@fontsource/<font>` (`^5.2` in
+`package.json`) and import the files they use in
+`assets/styles/app-async.scss`:
+
+```scss
+@import "@fontsource/andika/latin-400.css";      // <subset>-<weight>[-italic].css
+@import "@fontsource/andika/latin-700.css";
+```
+
+From 5.3.0 a fontsource package declares an `exports` map, and the bundler
+(webpack's resolver, which sass-loader and css-loader use) refuses every path
+the map does not list. What it lists, and so what still resolves by package
+name: the package itself (`@fontsource/andika`: `index.css`), the stylesheets
+at its root (`/latin-400.css`, `/400.css`, `/latin.css`...), the font files
+(`/files/andika-latin-400-normal.woff2`), and `/scss` (the metadata, from
+Sass only).
+
+What no longer resolves by package name - "Package path ./scss/mixins is not
+exported from package …/@fontsource/andika" - is anything else inside the
+package, the Sass mixins first:
+
+```scss
+@use "@fontsource/andika/scss/mixins" as andika;                          // 5.3: refused
+@use "../../node_modules/@fontsource/andika/scss/mixins.scss" as andika;  // by relative path: resolves
+```
+
+A **relative path** through `node_modules` is not a package request: the
+`exports` map does not apply to it, and it resolves whatever the version.
+Use it for the paths the map leaves out; keep the package name for the
+stylesheets above, which it lists. (Checked on 5.3.0 with webpack's
+enhanced-resolve 5.26, sass-loader 16 and css-loader 7 - the versions the
+sites build with.)
 
 ### Docker networks: a subnet per site
 
@@ -144,6 +203,48 @@ margin:
 {% include '@Base/partials/_credits.html.twig' with {color: 'white', outline: true} %}  {# on the right, on a photo #}
 ```
 
+### Secrets {#secrets}
+
+`bin/console secrets:set`, `secrets:generate-keys` and `secrets:remove` write
+under `config/secrets/<env>/`. **The web container cannot**: it mounts the
+project read-only (`.:/srv/app:ro`; only `var/`, `vendor/` and `public/` are
+writable), and the command fails on "Unable to create the secrets directory
+(/srv/app/config/secrets/dev)" - a `make` shortcut that runs in `<app>-web-1`
+fails the same way.
+
+Run them where the project is writable: the one-shot **composer** service of
+`docker-compose.setup.yml`, which mounts `.:/srv/app:rw` and reads the same
+`.env` and `.env.local`:
+
+```sh
+# the key pair of an environment (once per environment; see Sealed fields)
+docker compose -f docker-compose.yml -f docker-compose.setup.yml run --rm --entrypoint "" composer \
+    php bin/console secrets:generate-keys
+
+# a secret, read from standard input so that it stays out of the shell's history
+printf %s "$STRIPE_SECRET" | docker compose -f docker-compose.yml -f docker-compose.setup.yml run --rm -T --entrypoint "" composer \
+    php bin/console secrets:set STRIPE_API_KEY -
+
+# production's: with the public key alone, on any machine
+docker compose -f docker-compose.yml -f docker-compose.setup.yml run --rm --entrypoint "" composer \
+    php bin/console secrets:set STRIPE_API_KEY --env=prod
+```
+
+(`--entrypoint ""` skips the service's own entrypoint, which runs a whole
+`composer install`. On a machine with PHP, `php bin/console secrets:set …`
+from the project's directory does the same.)
+
+Then: commit `config/secrets/<env>/` **except** `prod.decrypt.private.php`
+(git-ignored: check `.gitignore` has a line for
+`config/secrets/prod*/prod*.decrypt.private.php`), and clear the cache of the
+running site (`docker exec <app>-web-1 php bin/console cache:clear`): the
+secrets are read when the container is compiled. Reading them works in the
+web container: `make secrets` (`secrets:list --reveal`).
+
+The same key pair seals the fields marked `#[Vault]` - the API keys typed in
+the back office - and without it they are refused, not stored in clear: see
+[Sealed fields](20-architecture/vault.md).
+
 ## What a new site no longer copies
 
 | No longer in the site | Use instead |
@@ -200,9 +301,9 @@ network". `-v` deletes the volumes: the database with them.
 
 ## Steps
 
-1. Copy the files of the first part - tracked files only, neither `.env.local` nor `.htpasswd`; rename (`APP_NAME`, ports, `composer.json`, `package.json`); give the two networks their subnets.
+1. Copy the files of the first part - tracked files only, `symfony.lock` among them, neither `.env.local` nor `.htpasswd`; rename (`APP_NAME`, ports, `composer.json`, `package.json`); give the two networks their subnets.
 2. `make install-dev` (composer and yarn in the setup containers, `COMPOSER_ALLOW_SUPERUSER=1`): see the order above.
-3. `make doctrine-migration`, then `make doctrine-migrate` and `make database-test`.
+3. Generate the key pairs (`secrets:generate-keys`, dev and test: see [Secrets](#secrets)), then `make doctrine-migration`, `make doctrine-migrate` and `make database-test`.
    These run from a script or an agent as well as from a terminal: the
    Makefile's `DOCKER_WEB`, `DOCKER_DATABASE`, `DOCKER_PROXY` and `DOCKER_ASSETS`
    pass `docker exec` the `TTY_FLAG` (`-ti` when standard input is a terminal,
