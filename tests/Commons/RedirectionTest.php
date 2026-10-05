@@ -30,6 +30,20 @@ class RedirectionTest extends TestCase
         $this->assertNull($redirection->setEnabled(false)->resolve('/produit/enseigne'));
     }
 
+    /**
+     * The database finds "/Produit/Enseigne" for "/produit/enseigne" when its
+     * collation says so (MySQL's default): the row it found is not refused
+     * afterwards for its case - the old address answered 404.
+     */
+    public function testAnExactRedirectionWhateverTheCase(): void
+    {
+        $redirection = new Redirection('/produit/enseigne', '/savoir-faire/enseigne');
+
+        $this->assertSame('/savoir-faire/enseigne', $redirection->resolve('/Produit/Enseigne'));
+        $this->assertSame('/savoir-faire/enseigne', (new Redirection('/Produit/Été', '/savoir-faire/enseigne'))->resolve('/produit/été'));
+        $this->assertNull($redirection->resolve('/Produit/Enseigne-Drapeau'));
+    }
+
     public function testAPrefixCarriesWhatItsStarStoodFor(): void
     {
         $all = new Redirection('/categorie-produit/*', '/savoir-faire');

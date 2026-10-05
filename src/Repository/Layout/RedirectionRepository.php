@@ -35,6 +35,19 @@ class RedirectionRepository extends ServiceEntityRepository
             }
         }
 
+        // The database compared with its collation - MySQL's default takes
+        // "/Produit/Enseigne" for "/produit/enseigne" - and the comparison
+        // above, letter for letter, then threw away the row it had found: the
+        // old address answered 404. What the database found for the address
+        // is the redirection, whatever the case; the same letters still win.
+        foreach ($candidates as $candidate) {
+            foreach ($exact as $redirection) {
+                if (mb_strtolower($redirection->getSource()) === mb_strtolower($candidate)) {
+                    return $redirection;
+                }
+            }
+        }
+
         /** @var Redirection[] $prefixes */
         $prefixes = $this->createQueryBuilder('r')
             ->andWhere('r.enabled = true')

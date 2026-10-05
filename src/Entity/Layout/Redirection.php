@@ -163,7 +163,9 @@ class Redirection
         }
 
         if (!$this->isPrefix()) {
-            return $address === $this->source ? $this->target : null;
+            // Whatever the case: the lookup is the database's, whose collation
+            // decides whether "/Produit" is "/produit" (RedirectionRepository::forAddress()).
+            return mb_strtolower($address) === mb_strtolower($this->source) ? $this->target : null;
         }
 
         $prefix = substr($this->source, 0, -1);

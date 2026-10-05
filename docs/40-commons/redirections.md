@@ -42,6 +42,13 @@ trailing slash, no fragment), so a whole address pasted from the old site is
 fine. The one written for the address with its query comes first, then the
 one for its path, then the longest prefix.
 
+The case of an exact source is the database's to judge: with MySQL's default
+collation `/Produit/Enseigne` is `/produit/enseigne` and is redirected (the
+row was found, then refused for its case: the address answered 404); on a
+case-sensitive database (SQLite, a `_bin` collation) only the same letters
+match. A prefix (`/categorie-produit/*`) is compared letter for letter
+everywhere.
+
 The target is a path of the site or a whole address. When the source has no
 query and the target none either, the visitor's query follows (`?utm_source=…`).
 
