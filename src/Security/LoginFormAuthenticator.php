@@ -126,12 +126,15 @@ class LoginFormAuthenticator extends AbstractLoginFormAuthenticator
         // Update client information
         if (($user = $token->getUser())) {
 
-            $permittedRoles = UserRole::getPermittedValues();
-            foreach ($user->getRoles() as $role) {
-
-                if (!in_array($role, $permittedRoles)) {
-                    $user->removeRole($role);
-                }
+            // A role the application's UserRole enum no longer knows is dropped
+            // from the account's own roles - the `roles` column, getOwnRoles().
+            // Never from getRoles(): it adds the roles of the account's groups,
+            // which are free names (ROLE_PRACTITIONER, ROLE_SECRETARY...), are
+            // not stored on the account and are not this method's to take away.
+            $ownRoles = $user->getOwnRoles();
+            $knownRoles = array_values(array_intersect($ownRoles, UserRole::getPermittedValues()));
+            if (count($knownRoles) !== count($ownRoles)) {
+                $user->setRoles($knownRoles);
             }
 
             $user->setTimezone();

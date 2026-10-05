@@ -24,6 +24,13 @@ security:
             form_login:
                 login_path: security_login
                 check_path: security_login
+            # The login page's own form (security_login[identifier],
+            # security_login[password]) is signed in by the bundle's
+            # authenticator, as in an application; it is asked before
+            # form_login, which stays the entry point.
+            custom_authenticator:
+                - Base\Security\LoginFormAuthenticator
+            entry_point: form_login
 
     # The demo signs you in without a login form (see DemoController::index);
     # nothing here is a pattern to copy into a real application.

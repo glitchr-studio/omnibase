@@ -53,7 +53,12 @@ class UserTracker
 
             $uniqid = uniqid("", true);
             $session->set(self::PHPUSERID, $uniqid);
-            setcookie(self::PHPUSERID, $uniqid, 0, "/", $this->router->getDomain());
+            // Once output has started (a command, a test run) the cookie cannot be
+            // sent and setcookie() only warns - a warning PHPUnit turns into the
+            // failure of the sign-in under test. The session keeps the identifier.
+            if (!headers_sent()) {
+                setcookie(self::PHPUSERID, $uniqid, 0, "/", $this->router->getDomain());
+            }
         }
 
         return $uniqid;
