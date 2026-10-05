@@ -72,7 +72,7 @@ final class HtmlTwigExtension extends AbstractExtension
             $htmlOrJson = $enhancer->enhanceHeadings($htmlOrJson, $maxHeadings === true ? null : $maxHeadings);
         }
 
-        return $enhancer->render($htmlOrJson, ['attr' => $options['row_attr'] ?? []]);
+        return $enhancer->render($htmlOrJson, ['attr' => $options['row_attr'] ?? [], 'hydrate' => $options['hydrate'] ?? true]);
     }
 
     public function getTableOfContents(?string $htmlOrJson, ?int $maxLevel = null): array

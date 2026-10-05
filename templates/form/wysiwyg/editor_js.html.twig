@@ -1,8 +1,11 @@
-
 {% set attr = options.attr ?? [] %}
 {% set attr = attr|merge({
     'class': 'codex-container wysiwyg ' ~ (attr.class is defined ? ' ' ~ attr.class : '')
 }) %}
 
-<div data-edjs="{{ json|json_encode }}" {{ html_attributes(attr) }}></div>
+{# The blocks as HTML, rendered on the server (Base\Service\Model\Wysiwyg\EditorJsRenderer):
+   the page reads without any script. data-edjs keeps the document for the editor's
+   script, which replaces this HTML by a read-only editor where a page loads it
+   (|wysiwyg({hydrate: false}) leaves it out). #}
+<div {% if hydrate ?? true %}data-edjs="{{ json|json_encode }}" {% endif %}{{ html_attributes(attr) }}>{{ (html ?? '')|raw }}</div>
 <div class="clear-both"></div>

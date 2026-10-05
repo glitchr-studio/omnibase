@@ -101,3 +101,36 @@ wins over `translations/`, ICU syntax included. The texts are cached (the
 application's `cache.redis` pool when it has one, else `cache.app`) and the
 cache is emptied when one is saved. The screen is omnibase/admin's "Textes du
 site" (`Base\Admin\Controller\Crud\TextOverrideCrudController`).
+
+## A text written in the editor: `|wysiwyg`
+
+A field edited with omnibase's editor (`WysiwygField`, EditorJS) stores a JSON
+document, `{"blocks": [...]}`; a field edited with Quill stores HTML.
+`|wysiwyg` prints either:
+
+```twig
+{{ page.content|wysiwyg|raw }}
+{{ page.content|wysiwyg({headings: 3, semantics: true, media: {storage: 'local.public'}})|raw }}
+{{ page.content|wysiwyg({hydrate: false})|raw }}        {# the HTML alone #}
+```
+
+The blocks of an EditorJS document are rendered **on the server**
+(`Base\Service\Model\Wysiwyg\EditorJsRenderer`): paragraph, header, list
+(nested, ordered, checklist), quote, image, embed, table, code, delimiter,
+warning / alert, raw, link, attachment. The page reads without any script,
+and so does a crawler. (It used to print an empty `<div data-edjs="…">` that
+only the editor's script could fill: a site that does not load that script
+on its public pages showed nothing.)
+
+| Option | |
+|---|---|
+| `hydrate` | true (default): the document also stays in `data-edjs`, and a page that loads the editor's script (`form.editor`) gets a read-only editor in place of the HTML, as before. false: the HTML alone |
+| `headings` | anchors on the headings, down to that level (`true`: all) - with `\|wysiwyg_toc` for the table of contents |
+| `semantics` | the site's keywords linked |
+| `media` | false, or the image settings (`storage`) |
+| `row_attr` | attributes of the wrapping `<div class="codex-container wysiwyg">` |
+
+A block's text keeps the editor's inline HTML (bold, links, marks, mentions);
+tags outside that list, `on…` attributes and `javascript:` addresses are
+removed. In PHP: `EditorJsRenderer::render($json)` gives the HTML of a
+document (an e-mail, a feed, a search index).

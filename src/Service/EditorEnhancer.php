@@ -3,6 +3,7 @@
 namespace Base\Service;
 
 use Base\Imagine\FilterInterface;
+use Base\Service\Model\Wysiwyg\EditorJsRenderer;
 
 class EditorEnhancer extends WysiwygEnhancer implements EditorEnhancerInterface
 {
@@ -17,7 +18,16 @@ class EditorEnhancer extends WysiwygEnhancer implements EditorEnhancerInterface
             $json = json_decode($json);
         }
 
-        return $this->twig->render("@Base/form/wysiwyg/editor_js.html.twig", ["json" => $json, "options" => $options]);
+        // The blocks as HTML, written by the server: what the page shows by
+        // itself. `hydrate` (true by default) also leaves the document in
+        // data-edjs, for the editor's script to take over as a read-only
+        // editor where a page loads it; false prints the HTML alone.
+        return $this->twig->render("@Base/form/wysiwyg/editor_js.html.twig", [
+            "json" => $json,
+            "html" => EditorJsRenderer::render($json),
+            "hydrate" => $options["hydrate"] ?? true,
+            "options" => $options,
+        ]);
     }
 
     public function getTableOfContents(mixed $json, ?int $maxLevel = null): array
