@@ -41,6 +41,11 @@ use Symfony\Component\Form\DataMapperInterface;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
+use Symfony\Component\Form\FormError;
+use Symfony\Component\Form\CallbackTransformer;
+use Symfony\Component\Form\Exception\TransformationFailedException;
+use Symfony\Component\Form\ChoiceList\View\ChoiceGroupView;
+use Symfony\Component\Form\ChoiceList\View\ChoiceView;
 use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
 use Symfony\Component\Routing\RouterInterface;
@@ -133,6 +138,9 @@ class SelectType extends AbstractType implements DataMapperInterface
         $this->propertyAccessor = PropertyAccess::createPropertyAccessor();
     }
 
+    /** What a required select sent empty answers (Symfony's NotBlank message, `validators` domain). */
+    public const REQUIRED_MESSAGE = 'This value should not be blank.';
+
     public function getBlockPrefix(): string
     {
         return 'select2';
@@ -158,6 +166,12 @@ class SelectType extends AbstractType implements DataMapperInterface
             ],
 
             //'query_builder'   => null,　// To be implemented if necessary... (currently relying on Autocomplete model and Association*Type..)
+
+            // The field's errors stay on the field - a required select left
+            // empty, a constraint of the property - where its row prints them
+            // (as Symfony's own compound choice and date fields do): a compound
+            // form hands its errors to the form above by default.
+            'error_bubbling' => false,
 
             "disable" => false,
             'choices' => null,
@@ -575,6 +589,49 @@ class SelectType extends AbstractType implements DataMapperInterface
             }
 
             $form->remove('choice')->add('choice', ChoiceType::class, $formOptions);
+        });
+
+        // A required select left empty is an error of the form. The browser's
+        // own `required` was the only check: a form sent without it (the back
+        // office's forms are `novalidate`, a page whose script did not run, a
+        // request made by hand) stored null where a value was asked - or died
+        // on it, when the record's setter takes none. A list of several stays
+        // free to be empty unless `required_when_multiple` says otherwise, as
+        // its `required` attribute does.
+        //
+        // Said as a failed transformation: the field is then not synchronized,
+        // so the form above does not write the empty value into the record
+        // (which keeps what it had), and the form's validator prints the
+        // message on the field, in the visitor's language.
+        $builder->addViewTransformer(new CallbackTransformer(
+            fn($value) => $value,
+            function ($value) use (&$options) {
+                if ('' === $value) {
+                    $value = null;     // as a form without transformer reads it
+                }
+
+                $empty = null === $value || [] === $value || ($value instanceof Collection && $value->isEmpty());
+                if (!$empty || !$options["required"] || ($options["multiple"] && !$options["required_when_multiple"])) {
+                    return $value;
+                }
+
+                $failure = new TransformationFailedException('A required select was sent empty.');
+                $failure->setInvalidMessage(self::REQUIRED_MESSAGE);
+
+                throw $failure;
+            }
+        ));
+
+        // Without the validator (symfony/validator not installed) nobody reads
+        // the failure: the field says it itself.
+        $builder->addEventListener(FormEvents::POST_SUBMIT, function (FormEvent $event) {
+            $form = $event->getForm();
+            $failure = $form->getTransformationFailure();
+            if (null === $failure || self::REQUIRED_MESSAGE !== $failure->getInvalidMessage() || $form->getRoot()->getConfig()->hasOption('constraints')) {
+                return;
+            }
+
+            $form->addError(new FormError($this->translator->trans(self::REQUIRED_MESSAGE, [], 'validators'), self::REQUIRED_MESSAGE, [], null, $failure));
         });
     }
 
@@ -1034,6 +1091,9 @@ class SelectType extends AbstractType implements DataMapperInterface
             $selectOpts["data"] = $formattedData;
             $selectOpts["selected"] = $selectedData;
 
+            // The same entries, for the <option>s the server prints itself (finishView()).
+            $view->vars["select2-entries"] = $formattedData;
+
             //
             // Set controller url
             $crudController = AbstractCrudController::getCrudControllerFqcn($options["class"]);
@@ -1076,5 +1136,103 @@ class SelectType extends AbstractType implements DataMapperInterface
             $view->vars["data"][$key] = $this->classMetadataManipulator->isEntity($choice) ? $choice->getId() : $choice;
         }
 
+    }
+
+    /**
+     * The <select> the server prints holds its options and its selection.
+     *
+     * The inner choice was drawn empty and filled by select2 alone from
+     * data-select2-options: on a page whose script did not run (blocked,
+     * failed, not loaded yet) there was nothing to choose, a product's
+     * availability arrived null, and a list that did print its options - a
+     * choice_loader's, the currencies - printed none of them selected, so the
+     * browser sent the first one (AFA) in place of the record's value.
+     *
+     * - The entries select2 receives - the choices of a static list, of an
+     *   enum; the records already chosen of an autocompleted one - are
+     *   printed as <option>s, groups as <optgroup>s, with the labels select2
+     *   shows. select2 empties the select before filling it from its data, as
+     *   it always did: nothing is listed twice.
+     * - The value of the record is the selected option, for those and for the
+     *   options a choice_loader gave.
+     * - A select of one value starts with an empty option carrying the
+     *   placeholder: without it the browser - and select2, which asks for
+     *   this very option - picks the first choice when the record has none.
+     */
+    public function finishView(FormView $view, FormInterface $form, array $options): void
+    {
+        $choice = $view->children["choice"] ?? null;
+        if (null === $choice) {
+            return;
+        }
+
+        $toValue = fn(mixed $id): ?string => is_scalar($id) ? (string) $id : ($id instanceof \UnitEnum ? NativeEnum::id($id) : null);
+
+        $selected = array_values(array_filter(array_map($toValue, $view->vars["data"] ?? []), fn($id) => null !== $id && '' !== $id));
+
+        $toViews = function (array $entries) use (&$toViews, &$selected, $toValue): array {
+            $views = [];
+            foreach ($entries as $entry) {
+                if (!is_array($entry)) {
+                    continue;
+                }
+
+                if (array_key_exists("children", $entry)) {
+                    $group = $toViews((array) $entry["children"]);
+                    if ($group) {
+                        // Keyed by its label: the form theme prints an <optgroup>'s label from the key.
+                        $label = (string) ($entry["text"] ?? "");
+                        while (array_key_exists($label, $views)) {
+                            $label .= " ";
+                        }
+                        $views[$label] = new ChoiceGroupView(trim($label), $group);
+                    }
+                    continue;
+                }
+
+                $value = $toValue($entry["id"] ?? null);
+                if (null === $value || '' === $value) {
+                    continue;
+                }
+
+                $label = $entry["text"] ?? null;
+                if (!is_scalar($label) || '' === trim((string) $label)) {
+                    $label = is_string($entry["html"] ?? null) ? trim(html_entity_decode(strip_tags($entry["html"]))) : $value;
+                }
+
+                if (!empty($entry["selected"]) && !in_array($value, $selected, true)) {
+                    $selected[] = $value;
+                }
+                $views[] = new ChoiceView($entry["id"], $value, (string) $label);
+            }
+
+            return $views;
+        };
+
+        $entries = $toViews($view->vars["select2-entries"] ?? []);
+        unset($view->vars["select2-entries"]);
+        if ($entries) {
+            $choice->vars["choices"] = $entries;
+            $choice->vars["preferred_choices"] = [];
+            $choice->vars["choice_translation_domain"] = false;     // the labels are words already
+        }
+
+        $multiple = (bool) ($choice->vars["multiple"] ?? false);
+        $choice->vars["value"] = $multiple ? $selected : ($selected[0] ?? "");
+        $choice->vars["is_selected"] = $multiple
+            ? fn($value, array $values): bool => in_array((string) $value, $values, true)
+            : fn($value, $current): bool => (string) $value === (string) $current;
+
+        if (!$multiple && null === ($choice->vars["placeholder"] ?? null) && null !== $options["placeholder"] && false !== $options["placeholder"]) {
+            $choice->vars["placeholder"] = $this->translator->trans($options["placeholder"], [], "@fields");
+            $choice->vars["translation_domain"] = false;
+            $choice->vars["placeholder_in_choices"] = false;
+
+            // `required` reaches the <select> through the attributes the
+            // widget's template hands down (form.vars.required): the inner
+            // choice printing its own as well, now that it has a placeholder,
+            // would write the attribute twice.
+            $choice->vars["required"] = false;
+        }
     }
 }

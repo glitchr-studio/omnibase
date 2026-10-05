@@ -82,3 +82,49 @@ on a plain Doctrine one.
 `AssociationType` embeds the related record's own form, always. The back
 office decides, for an `AssociationField`, between that form and a picker:
 see omnibase/admin's `docs/crud-fields.md`.
+
+## A select works before its script does
+
+`SelectType` is drawn by select2, but the `<select>` the server prints is a
+whole one: on a page whose script did not run - blocked, failed, not loaded
+yet - it can be read, changed and sent.
+
+- **Its options.** The choices of a static list or of an enum, groups as
+  `<optgroup>`, with the labels select2 shows; for an autocompleted list, the
+  records already chosen. select2 empties the select before filling it from
+  its own data, as it always did: nothing is listed twice.
+- **Its selection.** The record's value is the `selected` option - also in
+  the lists that printed their options already (a `choice_loader`:
+  `CurrencyType`), where none was selected and the browser sent the first of
+  the list in place of the record's currency.
+- **An empty first option** in a select of one value, carrying the
+  placeholder: without it the browser picks the first choice for a record
+  that has none. It is the option select2 itself asks for to show a
+  placeholder.
+
+(The select was printed with no option at all and filled by select2 alone:
+without the script a product's availability arrived null.)
+
+### `required` is checked by the server
+
+A required `SelectType` sent empty is an error of the form - "This value
+should not be blank.", in the visitor's language (`validators` domain) - on
+the field itself, where its row prints it. The browser's `required`
+attribute was the only check, and the back office's forms are `novalidate`.
+
+The empty value is not written into the record, which keeps what it had: the
+field fails as a transformation does (it is not synchronized), so a setter
+that takes no null - `setStatus(PublicationStatus $status)` - is not called
+with one. That call answered 500 ("Expected argument of type ..., null
+given") in place of the form's error.
+
+- `required` is what the field says, `true` unless said otherwise
+  (`'required' => false`, `->setRequired(false)` on a CRUD field): a select
+  on a nullable property that may stay empty has to say so.
+- A list of several may be empty, as before, unless
+  `'required_when_multiple' => true`.
+- A disabled field is not asked.
+
+The field's errors no longer go up to the form (`error_bubbling` is `false`,
+as for Symfony's own compound choice and date fields): a constraint of the
+property is printed beside the select too, not at the top of the form.
