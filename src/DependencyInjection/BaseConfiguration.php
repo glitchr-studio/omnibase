@@ -731,6 +731,12 @@ class BaseConfiguration extends AbstractBaseConfiguration
                 ->end()
             ->end()
 
+            ->arrayNode('vault')->addDefaultsIfNotSet()
+                ->children()
+                    ->booleanNode('allow_plaintext')->defaultFalse()->info('#[Vault]: without the environment\'s key pair (bin/console secrets:generate-keys), store a secured field in clear instead of refusing it. Off: the save fails with VaultKeyNotFoundException.')->end()
+                ->end()
+            ->end()
+
             ->arrayNode('download_links')->addDefaultsIfNotSet()
                 ->children()
                     ->integerNode('ttl')->min(1)->defaultValue(600)->info('Seconds a signed download link stays valid.')->end()

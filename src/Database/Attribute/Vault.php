@@ -11,6 +11,7 @@ use Doctrine\ORM\Event\PostFlushEventArgs;
 use Doctrine\ORM\Event\PreFlushEventArgs;
 use Doctrine\Persistence\Event\LifecycleEventArgs;
 use Doctrine\ORM\Mapping\ClassMetadata;
+use Base\Exception\VaultKeyNotFoundException;
 use Exception;
 
 use Symfony\Component\Cache\Marshaller\MarshallerInterface;
@@ -67,18 +68,35 @@ class Vault extends AbstractAttribute
         return ($target == AttributeReader::TARGET_CLASS);
     }
 
+    /**
+     * Where the key pair of a vault is: Symfony's own secrets vault of that
+     * environment (`bin/console secrets:generate-keys`).
+     */
+    public function getKeyPath(?string $vault = null): string
+    {
+        $vault ??= $this->getEnvironment();
+
+        return $this->getProjectDir() . "/config/secrets/{$vault}/{$vault}.decrypt.private.php";
+    }
+
+    /**
+     * The key pair of a vault: config/secrets/<vault>/<vault>.decrypt.private.php,
+     * else - for the running environment - the SYMFONY_DECRYPTION_SECRET
+     * variable (the same key, base64-encoded: how a production server is
+     * given it without the file).
+     */
     public function loadKeys(?string $vault = null): array
     {
         $vault ??= $this->getEnvironment();
 
-        $path = $this->getProjectDir()
-            . "/config/secrets/{$vault}/{$vault}.decrypt.private.php";
-
-        if (!is_file($path)) {
-            throw new Exception("Vault keypair not found");
+        $path = $this->getKeyPath($vault);
+        if (is_file($path)) {
+            $keypair = include $path;
+        } elseif ($vault === $this->getEnvironment() && ($secret = $_SERVER['SYMFONY_DECRYPTION_SECRET'] ?? $_ENV['SYMFONY_DECRYPTION_SECRET'] ?? null)) {
+            $keypair = base64_decode((string) $secret, true);
+        } else {
+            throw new VaultKeyNotFoundException($vault, $path);
         }
-
-        $keypair = include $path;
 
         if (!is_string($keypair) ||
             strlen($keypair) !== SODIUM_CRYPTO_BOX_KEYPAIRBYTES) {
@@ -100,25 +118,58 @@ class Vault extends AbstractAttribute
     }
 
     /**
+     * base.vault.allow_plaintext: the behaviour of before - without a key
+     * pair, a secured field is stored as it is. Off unless a site turns it on.
+     */
+    public function allowsPlaintext(): bool
+    {
+        try {
+            return (bool) $this->getParameterBag('base.vault.allow_plaintext');
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    /**
+     * Whether a secured field can be stored in this vault: its key pair is
+     * there, or the site accepted clear text.
+     */
+    public function canSeal(?string $vault = null): bool
+    {
+        return null !== $this->getMarshaller($vault) || $this->allowsPlaintext();
+    }
+
+    /**
+     * Fails closed: without the vault's key pair the value is refused
+     * (VaultKeyNotFoundException), never stored in clear - unless the site
+     * said so (base.vault.allow_plaintext).
+     *
      * @param MarshallerInterface|null $marshaller
      * @param string|null $value
-     * @return array|mixed|null
+     * @throws VaultKeyNotFoundException
      */
-    public function seal(?MarshallerInterface $marshaller, mixed $value): string
+    public function seal(?MarshallerInterface $marshaller, mixed $value, ?string $vault = null): string
     {
         if (is_array($value) || is_object($value)) {
             $value = serialize($value);
         }
 
-        // no vault keys available: store the value unsealed
         if ($marshaller === null) {
-            return (string) $value;
+            if ($this->allowsPlaintext()) {
+                return (string) $value;
+            }
+
+            throw new VaultKeyNotFoundException($vault ?? $this->getEnvironment(), $this->getKeyPath($vault));
         }
 
         $failed = [];
         $values = $marshaller->marshall([$value], $failed);
-        if ($failed) {
-            return $value;
+        if ($failed || !isset($values[0])) {
+            if ($this->allowsPlaintext()) {
+                return (string) $value;
+            }
+
+            throw new VaultKeyNotFoundException($vault ?? $this->getEnvironment(), $this->getKeyPath($vault), 'the value could not be sealed');
         }
 
         return (string) base64_encode($values[0]);
@@ -244,7 +295,7 @@ class Vault extends AbstractAttribute
                     continue;
                 }
 
-                $sealedValue = $this->seal($marshaller, $plainValue);
+                $sealedValue = $this->seal($marshaller, $plainValue, $vault);
                 $propertyAccessor->setValue($entity, $field, $sealedValue);
                 $entity->setVaultBag($field, $sealedValue, $plainValue);
             }

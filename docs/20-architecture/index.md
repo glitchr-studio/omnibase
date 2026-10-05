@@ -16,6 +16,8 @@ The bundle is organised around a few long-lived pieces:
   required of some roles: [Account security](account-security.md).
 - **Forms** — the theme, and where a field's texts are translated:
   [Forms](forms.md).
+- **Sealed fields** — `#[Vault]`, its key pair, and what happens without
+  one: [Sealed fields](vault.md).
 - **Errors** — which status an error is answered under, and the 404 that are
   meant: [Errors and refusals](errors.md).
 - **Time** — PHP's zone is the visitor's; a moment is stored in UTC
