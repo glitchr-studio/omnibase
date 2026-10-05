@@ -364,7 +364,10 @@ trait FormGuessTrait
                     // Get the first order direction for this field
                     $orderDirections = array_values($mapping->orderBy);
                     if (count($orderDirections)) {
-                        $order = strtoupper($orderDirections[0]);
+                        // A string ('ASC'), or an enum (Doctrine's Order / SortDirection) depending on the mapping driver
+                        $direction = $orderDirections[0];
+                        $direction = $direction instanceof \BackedEnum ? $direction->value : ($direction instanceof \UnitEnum ? $direction->name : $direction);
+                        $order = strtoupper((string) $direction);
                     }
                 }
             }
