@@ -26,6 +26,11 @@ abstract class ConstraintEntity extends Constraint
         $this->fields = $fields;
         $this->entity = $entity;
 
+        // A message the constraint was given is the one it says. Without one it
+        // says the generic "@validators.<constraint>", as it always did: the
+        // per-field key built below is replaced by the parent's default.
+        $given = $message;
+
         // Generate default message if none provided
         if ($message === null) {
             $constraintName = explode("\\", static::class);
@@ -42,7 +47,7 @@ abstract class ConstraintEntity extends Constraint
         $this->message = $message;
 
         // MUST be last (Symfony 7+ requirement)
-        parent::__construct(groups: $groups, payload: $payload);
+        parent::__construct(message: $given, groups: $groups, payload: $payload);
     }
 
     public function getRequiredOptions(): array

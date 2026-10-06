@@ -68,7 +68,8 @@ use ApiPlatform\Metadata\ApiResource;
 #[ORM\DiscriminatorColumn( name: "class", type: "string" )]
 #[DiscriminatorEntry( value: "common" )]
 
-#[AssertBase\UniqueEntity(fields:["email"], groups:["new", "edit"])]
+// An address somebody already signed up with: said as a sentence, which the sign-up page follows with the ways in.
+#[AssertBase\UniqueEntity(fields:["email"], message: "@validators.user.email.unique", groups:["new", "edit"])]
 
 #[ApiResource]
 class User implements UserInterface, TwoFactorInterface, EmailTwoFactorInterface, BackupCodeInterface, TrustedDeviceInterface, PasswordAuthenticatedUserInterface, IconizeInterface, AutocompleteInterface

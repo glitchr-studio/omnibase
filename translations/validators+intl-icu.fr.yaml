@@ -7,7 +7,7 @@ abstract_attribute:
 
 user:
    email:
-      unique: "Cet email est déjà utilisé"
+      unique: "Un compte existe déjà avec cette adresse."
    username:
       unique: "Ce pseudo existe déjà"
 

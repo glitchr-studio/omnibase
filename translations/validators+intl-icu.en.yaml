@@ -5,6 +5,10 @@ abstract_attribute:
    code:
       unique: "Code \"{value}\" is already used"
 
+user:
+   email:
+      unique: "An account already exists with this address."
+
 unique_entity: "\"{value}\" is already used"
 
 email:

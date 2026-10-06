@@ -133,7 +133,7 @@ class RegisterAfterLoginHttpTest extends KernelTestCase
         }
     }
 
-    public function testAnAddressAlreadyTakenIsSaidOnThePage(): void
+    public function testAnAddressAlreadyTakenIsSaidOnThePageWithTheWaysIn(): void
     {
         $email = 'taken'.bin2hex(random_bytes(4)).'@example.org';
         $this->assertSame(302, $this->signUp($email)->getStatusCode());
@@ -143,9 +143,44 @@ class RegisterAfterLoginHttpTest extends KernelTestCase
         $this->assertContains($again->getStatusCode(), [200, 422], $this->said($again));
         $html = (string) $again->getContent();
         $this->assertSame(1, preg_match('~<div class="invalid-feedback"[^>]*>(.*?)</div>~s', $html, $error), 'the page says what is wrong: '.$this->said($again));
-        $this->assertStringContainsString($email, strip_tags($error[1]), 'in words, about that address');
+
+        // A sentence of the catalogue, in the page's language - not the constraint's generic '"x" is already used'.
+        $translator = static::getContainer()->get('translator');
+        $said = trim(html_entity_decode(strip_tags($error[1])));
+        $this->assertSame($translator->trans('@validators.user.email.unique'), $said);
+        $this->assertSame('Un compte existe déjà avec cette adresse.', $translator->trans('@validators.user.email.unique', [], null, 'fr'));
+        $this->assertSame('An account already exists with this address.', $translator->trans('@validators.user.email.unique', [], null, 'en'));
+        $this->assertStringNotContainsString($email, $said);
+
+        // Followed by the two ways in, by their routes.
+        $router = static::getContainer()->get('router');
+        $this->assertSame(1, preg_match('~<p class="signup-account-exists[^"]*">(.*?)</p>~s', $html, $ways), 'the ways in are offered');
+        $this->assertStringContainsString('href="'.$router->generate('security_login').'"', $ways[1]);
+        $this->assertStringContainsString('href="'.$router->generate('security_resetPassword').'"', $ways[1]);
+        $this->assertStringContainsString($translator->trans('@forms.register.signIn'), html_entity_decode($ways[1]));
+        $this->assertStringContainsString($translator->trans('@forms.register.forgotPassword'), html_entity_decode($ways[1]));
+
         $this->assertStringContainsString('value="'.$email.'"', $html, 'what was typed is kept');
         $this->assertCount(1, $this->entityManager()->getRepository('App\\Entity\\User')->findBy(['email' => $email]));
+    }
+
+    public function testASignUpRefusedForAnotherReasonOffersNoWayIn(): void
+    {
+        // The page as read, then as given back for two passwords that differ.
+        $this->browse('/login');
+        $page = $this->browse('/register', null, '/login');
+        $this->assertStringNotContainsString('signup-account-exists', (string) $page->getContent());
+
+        preg_match('/name="_base_security_registration\[_csrf_token\]"[^>]*value="([^"]+)"/', (string) $page->getContent(), $token);
+        $refused = $this->browse('/register', ['_base_security_registration' => [
+            'email' => 'new'.bin2hex(random_bytes(4)).'@example.org',
+            'plainPassword' => ['first' => 'A-long-Passphrase-42!', 'second' => 'Another-Passphrase-43!'],
+            'agreeTerms' => '1',
+            '_csrf_token' => html_entity_decode($token[1] ?? ''),
+        ]], '/register');
+
+        $this->assertContains($refused->getStatusCode(), [200, 422], $this->said($refused));
+        $this->assertStringNotContainsString('signup-account-exists', (string) $refused->getContent());
     }
 
     public function testTwoAddressesWithTheSameLocalPartGetTwoNames(): void

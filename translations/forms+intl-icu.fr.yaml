@@ -9,6 +9,9 @@ register:
     firstname: "Prénom"
     lastname: "Nom"
     agreeTerms: "En cochant, j'accepte les <a href=\"{0}\">conditions d'utilisation</a> et la <a href=\"{0}\">politique de confidentialité</a> de ce site"
+    # Sous « un compte existe déjà avec cette adresse » : les deux façons d'entrer.
+    signIn: "Se connecter"
+    forgotPassword: "Mot de passe oublié ?"
 
 logout:
     title: "Se déconnecter"

@@ -9,6 +9,9 @@ register:
     firstname: "Firstname"
     lastname: "Lastname"
     agreeTerms: "I agree to the website <a href=\"{0}\">terms & conditions</a> and <a href=\"{0}\">privacy policy</a>"
+    # Under "an account already exists with this address": the two ways in.
+    signIn: "Sign in"
+    forgotPassword: "Forgot your password?"
 
 logout:
     title: "Sign Out"

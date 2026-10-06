@@ -51,6 +51,17 @@
                 is the form's own). It was never printed: the form came back as typed, without a word. -#}
             {{ include('@Base/security/_field_feedback.html.twig', {field: form}) }}
 
+            {#- That address has an account: the two ways in. (A sign-up that succeeds signs in at once,
+                so this page cannot keep it secret; the forgotten-password page does - it answers the
+                same for every address.) -#}
+            {% if account_exists|default(false) %}
+            <p class="signup-account-exists text-center mb-2">
+                <a href="{{ path('security_login') }}">{{ '@forms.register.signIn'|trans }}</a>
+                &middot;
+                <a href="{{ path('security_resetPassword') }}">{{ '@forms.register.forgotPassword'|trans }}</a>
+            </p>
+            {% endif %}
+
             <div class="input-group form-group mb-2">
                 <div class="input-group-prepend">
                     <span class="input-group-text">

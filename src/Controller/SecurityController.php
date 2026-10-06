@@ -42,6 +42,9 @@ use Base\Service\LauncherInterface;
 use Base\Service\ParameterBagInterface;
 use Base\Service\SecurityPolicy;
 use Base\Service\TranslatorInterface;
+use Base\Validator\Constraints\UniqueEntity;
+use Symfony\Component\Form\FormInterface;
+use Symfony\Component\Validator\ConstraintViolationInterface;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Security\Http\Authenticator\Passport\Badge\RememberMeBadge;
@@ -319,12 +322,37 @@ class SecurityController extends AbstractController
             ->onDefault(function (FormProcessorInterface $formProcessor) {
                 return $this->render('security/register.html.twig', [
                     'form' => $formProcessor->getForm()->createView(),
-                    'user' => $formProcessor->getData()
+                    'user' => $formProcessor->getData(),
+                    // The address already has an account: the page says so, and gives the ways in.
+                    'account_exists' => $this->addressIsTaken($formProcessor->getForm()),
                 ]);
             })
             ->handleRequest($request);
 
         return $formProcessor->getResponse();
+    }
+
+    /**
+     * Whether the sign-up was refused because its address already has an
+     * account. A sign-up that succeeds signs in at once, so the page cannot
+     * hide that an address is taken: it says it, and offers to sign in or to
+     * ask for a new password - where the answer is the same for every address.
+     */
+    private function addressIsTaken(FormInterface $form): bool
+    {
+        if (!$form->isSubmitted()) {
+            return false;
+        }
+
+        foreach ($form->getErrors(true) as $error) {
+            $cause = $error->getCause();
+            $constraint = $cause instanceof ConstraintViolationInterface ? $cause->getConstraint() : null;
+            if ($constraint instanceof UniqueEntity && \in_array("email", (array) $constraint->fields, true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

@@ -111,7 +111,8 @@ class FormFactory extends SymfonyFormFactory implements FormFactoryInterface
                 $errors = $this->validator->validate($form->getData(), array_unique_object($constraints), $form->getConfig()->getOption("validation_groups"));
 
                 foreach ($errors as $error) {
-                    $form->addError(new FormError($error->getMessage()));
+                    // The violation goes with its error (its cause): what reads the form can tell which constraint spoke.
+                    $form->addError(new FormError($error->getMessage(), $error->getMessageTemplate(), $error->getParameters(), $error->getPlural(), $error));
                 }
             });
         }
@@ -138,7 +139,8 @@ class FormFactory extends SymfonyFormFactory implements FormFactoryInterface
                 $errors = $this->validator->validate($entity, array_unique_object($constraints), $form->getConfig()->getOption("validation_groups"));
 
                 foreach ($errors as $error) {
-                    $form->addError(new FormError($error->getMessage()));
+                    // The violation goes with its error (its cause): what reads the form can tell which constraint spoke.
+                    $form->addError(new FormError($error->getMessage(), $error->getMessageTemplate(), $error->getParameters(), $error->getPlural(), $error));
                 }
             }
         });
