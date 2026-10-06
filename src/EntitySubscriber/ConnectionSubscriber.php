@@ -63,9 +63,14 @@ class ConnectionSubscriber implements EventSubscriberInterface
         $passport = $event->getPassport();
         if(!$passport) return;
 
-        $user = null; // Passport is loading user.. so catching exception is required.
+        // The passport loads its user here, and may have none to give: an
+        // identifier nobody has (UserNotFoundException), or an attempt refused
+        // before the passport was given its loader - Symfony's login throttling
+        // (too many attempts) refuses first of all, and UserBadge::getUser() then
+        // throws a LogicException, which turned the refusal into a 500.
+        $user = null;
         try { $user = $passport->getUser(); }
-        catch(UserNotFoundException $e) { }
+        catch(UserNotFoundException|\LogicException $e) { }
         if (!$user instanceof User) return;
         
         $connection = $this->userTracker->getCurrentConnection($user);
