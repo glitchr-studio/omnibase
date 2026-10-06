@@ -65,6 +65,19 @@ class OverridingTranslator implements TranslatorInterface, TranslatorBagInterfac
         return $this->inner->trans($id, $parameters, $domain, $locale);
     }
 
+    /**
+     * Whether the team rewrote this key in that language. omnibase's
+     * translator asks it when a level of politeness is set
+     * (base.translator.politeness): a text rewritten at its base wins over a
+     * variant of the files, and a rewritten variant ("key._polite") is one.
+     */
+    public function isRewritten(string $id, ?string $domain = null, ?string $locale = null): bool
+    {
+        $lang = substr(str_replace('-', '_', $locale ?? $this->inner->getLocale()), 0, 2);
+
+        return isset($this->map()[($domain ?? 'messages').'|'.$lang.'|'.$id]);
+    }
+
     public function getCatalogue(?string $locale = null): MessageCatalogueInterface
     {
         return $this->inner->getCatalogue($locale);

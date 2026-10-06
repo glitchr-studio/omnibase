@@ -90,6 +90,7 @@ admin_settings:
   excerpt: "Élements configurables du site"
 
   empty: "Il n'y a pas de paramètre à configurer sur ce site, tu peux repartir de là où tu viens !"
+  empty._polite: "Il n'y a pas de paramètre à configurer sur ce site, vous pouvez repartir d'où vous venez !"
   success: "Les paramètres du site ont correctement été modifiés."
   failed: "Échec de modification des paramètres."
   valid: Vérifier et sauvegarder les nouveaux paramètres
@@ -100,6 +101,7 @@ admin_widgets:
   valid: Mettre à jour les emplacements
 
   empty: "Il n'y a pas de widget à configurer sur ce site, tu peux repartir de là où tu viens !"
+  empty._polite: "Il n'y a pas de widget à configurer sur ce site, vous pouvez repartir d'où vous venez !"
   success: "Les widgets du site ont correctement été mis à jour."
   failed: "Échec de la mise à jour des widgets."
 
@@ -120,6 +122,7 @@ exception:
   title: "Oups! Une erreur a eu lieu !"
   message: "Cette erreur est inattendue, mais on travaille à la réparer !<br/>
           Tu peux nous envoyer un email <a href=\"mailto:{0}\">ici</a> pour essayer de décrire ce qu'il s'est passé."
+  message._polite: "Cette erreur est inattendue, mais on travaille à la réparer !<br/> Vous pouvez nous envoyer un e-mail <a href=\"mailto:{0}\">ici</a> pour essayer de décrire ce qu'il s'est passé."
 
   return: "Retourner à la page d'<a href=\"{0}\">accueil</a>."
 

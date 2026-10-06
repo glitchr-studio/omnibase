@@ -265,6 +265,16 @@ class BaseConfiguration extends AbstractBaseConfiguration
                 ->end()
             ->end()
 
+            ->arrayNode('translator')->addDefaultsIfNotSet()
+                ->children()
+                    ->enumNode('politeness')
+                        ->values([null, 'plain', 'polite', 'formal'])
+                        ->defaultNull()
+                        ->info('How the site addresses people (docs/20-architecture/politeness.md): a text asked without a level of its own is taken in its "._plain", "._polite" or "._formal" variant when the catalogue has one (formal falls back on polite), else as it is. Unset: the texts as they are written.')
+                    ->end()
+                ->end()
+            ->end()
+
             ->arrayNode('parameter_bag')->addDefaultsIfNotSet()
 
                 ->children()

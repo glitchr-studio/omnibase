@@ -35,10 +35,24 @@ class Translator implements TranslatorInterface
     public const GENDERNESS_MASCULINE = "_masculine";
     public const GENDERNESS_NEUTRAL = "_neutral";
 
+    /**
+     * How somebody is addressed: familiar (tu, du, 常体), polite (vous, Sie,
+     * 丁寧語), formal (敬語). A text has one wording in the catalogue - its
+     * base text, at whatever level its language was written in - and may
+     * have a variant per level, under its key followed by the level:
+     * "key._plain", "key._polite", "key._formal".
+     *
+     * The level is the site's (base.translator.politeness) unless a call
+     * gives its own - the TRANSLATION_POLITENESS parameter of trans(), or
+     * one of these among the options of transEntity() / transEnum(). What is
+     * tried, in order: formal -> polite -> the base text; polite -> the base
+     * text; plain -> the base text. See docs/20-architecture/politeness.md.
+     */
     public const TRANSLATION_POLITENESS = "politeness";
     public const POLITENESS_PLAIN = "_plain";
     public const POLITENESS_POLITE = "_polite";
     public const POLITENESS_FORMAL = "_formal";
+    public const POLITENESS_LEVELS = [self::POLITENESS_PLAIN, self::POLITENESS_POLITE, self::POLITENESS_FORMAL];
 
     // Guards the "nested translations" while loops against a cyclic
     // catalogue reference (e.g. "foo" => "@bar", "bar" => "@foo") hanging a
@@ -60,11 +74,140 @@ class Translator implements TranslatorInterface
      */
     protected bool $isDebug;
 
-    public function __construct(\Symfony\Contracts\Translation\TranslatorInterface $translator, KernelInterface $kernel, ParameterBagInterface $parameterBag)
+    /** The site's level (one of POLITENESS_*), or null: the texts as they are written. */
+    protected ?string $politeness = null;
+
+    /** @var array{0: ?string}|null the level a call gave for itself, while that call is answered */
+    private ?array $politenessOfCall = null;
+
+    /** Whether the translator below knows the texts rewritten in the back office (Base\Translation\OverridingTranslator). */
+    private bool $asksRewritten = true;
+
+    public function __construct(\Symfony\Contracts\Translation\TranslatorInterface $translator, KernelInterface $kernel, ParameterBagInterface $parameterBag, ?string $politeness = null)
     {
         $this->parameterBag = $parameterBag;
         $this->translator = $translator;
         $this->isDebug = $kernel->isDebug();
+        $this->politeness = self::politenessLevel($politeness);
+    }
+
+    /** The site's level of politeness: one of POLITENESS_*, or null when none is set. */
+    public function getPoliteness(): ?string
+    {
+        return $this->politeness;
+    }
+
+    /**
+     * Another level from here on - a message written to somebody the site
+     * addresses otherwise, a test. "plain", "polite", "formal" (or a
+     * POLITENESS_* constant); null for the texts as they are written.
+     *
+     * @return $this
+     */
+    public function setPoliteness(?string $level)
+    {
+        $this->politeness = self::politenessLevel($level);
+
+        return $this;
+    }
+
+    /**
+     * A level as it may be written - "polite", "_polite", POLITENESS_POLITE -
+     * as one of POLITENESS_*; null for none (null, false, "", "none").
+     *
+     * @throws \InvalidArgumentException for anything else
+     */
+    public static function politenessLevel(mixed $level): ?string
+    {
+        if (null === $level || false === $level || "" === $level || "none" === $level) {
+            return null;
+        }
+
+        $name = \is_string($level) ? "_" . ltrim(mb_strtolower(trim($level)), "_") : null;
+        if (!\in_array($name, self::POLITENESS_LEVELS, true)) {
+            throw new \InvalidArgumentException(sprintf('Unknown level of politeness "%s": expected "plain", "polite" or "formal".', get_debug_type($level) === "string" ? $level : get_debug_type($level)));
+        }
+
+        return $name;
+    }
+
+    /**
+     * The variants tried for a level, the closest first: a formal text that
+     * was not written falls back on the polite one.
+     *
+     * @return list<string>
+     */
+    public static function politenessChain(?string $level): array
+    {
+        return match ($level) {
+            self::POLITENESS_FORMAL => [self::POLITENESS_FORMAL, self::POLITENESS_POLITE],
+            self::POLITENESS_POLITE => [self::POLITENESS_POLITE],
+            self::POLITENESS_PLAIN => [self::POLITENESS_PLAIN],
+            default => [],
+        };
+    }
+
+    /**
+     * The key of the variant to read in place of $id at this level, with its
+     * domain - or null: the base text is the one.
+     *
+     * Language first, level second: the catalogues are walked as Symfony
+     * falls back between them, and in each the variants are looked for before
+     * the base text - a German page whose text has no polite variant keeps
+     * its German text, it is not given the French polite one. A text the
+     * team rewrote in the back office counts as that language's: rewritten
+     * at its base, it wins over a variant of the files.
+     *
+     * @return array{0: string, 1: string}|null
+     */
+    protected function politeVariant(string $id, ?string $domain, ?string $locale, string $level): ?array
+    {
+        $array = explode(".", $id);
+        if (str_starts_with($id, "@")) {
+            $domain = substr(array_shift($array), 1);
+            $id = implode(".", $array);
+        }
+        $domain = $domain && str_starts_with($domain, "@") ? substr($domain, 1) : ($domain ?? self::DOMAIN_DEFAULT);
+        if ("" === $id || \in_array(end($array), self::POLITENESS_LEVELS, true)) {
+            return null; // already a variant, asked for by its own key
+        }
+
+        $chain = self::politenessChain($level);
+        $catalogue = $this->translator->getCatalogue(Localizer::__toLocale($locale ?? $this->getLocale(), "_"));
+        for ($depth = 0; $catalogue && $depth < 8; $catalogue = $catalogue->getFallbackCatalogue(), ++$depth) {
+            foreach ($chain as $variant) {
+                if ($this->isRewritten($id . "." . $variant, $domain, $catalogue->getLocale())) {
+                    return [$id . "." . $variant, $domain];
+                }
+            }
+            if ($this->isRewritten($id, $domain, $catalogue->getLocale())) {
+                return null;
+            }
+            foreach ($chain as $variant) {
+                if ($catalogue->defines($id . "." . $variant, $domain)) {
+                    return [$id . "." . $variant, $domain];
+                }
+            }
+            if ($catalogue->defines($id, $domain)) {
+                return null;
+            }
+        }
+
+        return null;
+    }
+
+    private function isRewritten(string $id, string $domain, string $locale): bool
+    {
+        if (!$this->asksRewritten) {
+            return false;
+        }
+
+        try {
+            return (bool) $this->translator->isRewritten($id, $domain, $locale);
+        } catch (\Error) {
+            // No translator below keeps rewritten texts (a bare Symfony translator).
+            return $this->asksRewritten = false;
+        }
     }
 
     public function getCatalogue(?string $locale = null): MessageCatalogueInterface
@@ -119,6 +262,28 @@ class Translator implements TranslatorInterface
         }
 
         $id = trim($id instanceof TranslatableMessage ? $id->getMessage() : $id);
+
+        // The level of politeness: this call's own when it gave one (it holds
+        // for the texts this one refers to), else the site's. The text is
+        // then read under its variant's key when the catalogue has one.
+        if (\array_key_exists(self::TRANSLATION_POLITENESS, $parameters)) {
+            $own = [self::politenessLevel($parameters[self::TRANSLATION_POLITENESS])];
+            unset($parameters[self::TRANSLATION_POLITENESS]);
+
+            $outer = $this->politenessOfCall;
+            $this->politenessOfCall = $own;
+            try {
+                return $this->trans($domainFallback !== null ? new TranslatableMessage($id, [], $domain) : $id, $parameters, $domainFallback ?? $domain, $locale, $recursive);
+            } finally {
+                $this->politenessOfCall = $outer;
+            }
+        }
+
+        $level = $this->politenessOfCall ? $this->politenessOfCall[0] : $this->politeness;
+        if ($level !== null && ($variant = $this->politeVariant($id, $domain, $locale, $level))) {
+            [$id, $domain] = $variant;
+        }
+
         $customId = preg_match("/" . self::STRUCTURE_DOT . "|" . self::STRUCTURE_DOTBRACKET . "/", $id);
         $startsWithDomainTag = str_starts_with($id, "@");
 
@@ -325,19 +490,16 @@ class Translator implements TranslatorInterface
     }
 
     /**
-     * @param string $id
-     * @param array|string $options
-     * @param array|null $parameters
-     * @param string|null $domain
-     * @param string|null $locale
-     * @return array|false|string|string[]|null
+     * The suffixes to try after a key for these options, the most precise
+     * first: every ordering of the level of politeness, the gender and the
+     * number asked; then, for a level of politeness the call gave, the levels
+     * it falls back on (formal -> polite) and the same key without any; then
+     * the bare key.
+     *
+     * @return array{0: list<string>, 1: list<string>, 2: bool} the suffixes, the parts asked, whether the call gave a level of its own
      */
-    protected function transPerms(string $id, array|string $options = [], ?array $parameters = [], ?string $domain = null, ?string $locale = null)
+    protected function permutations(array $options): array
     {
-        if (!is_array($options)) {
-            $options = array_filter([$options]);
-        }
-
         $politeness = null;
         if (in_array(self::POLITENESS_PLAIN, $options)) {
             $politeness = self::POLITENESS_PLAIN;
@@ -346,7 +508,6 @@ class Translator implements TranslatorInterface
         } elseif (in_array(self::POLITENESS_FORMAL, $options)) {
             $politeness = self::POLITENESS_FORMAL;
         }
-        $politeness = $politeness ? "." . $politeness : "";
 
         $genderness = null;
         if (in_array(self::GENDERNESS_INCLUSIVE, $options)) {
@@ -368,11 +529,40 @@ class Translator implements TranslatorInterface
         }
         $noun = $noun ? "." . $noun : "";
 
-        $in = array_filter([$politeness, $genderness, $noun]);
-        $permutations = array_map(fn($a) => implode("", $a), get_permutations($in));
+        $others = array_filter([$genderness, $noun]);
+        $permutations = [];
+        foreach (self::politenessChain($politeness) as $level) {
+            foreach (get_permutations(array_merge(["." . $level], $others)) as $permutation) {
+                $permutations[] = implode("", $permutation);
+            }
+        }
+        foreach (get_permutations($others) as $permutation) {
+            $permutations[] = implode("", $permutation);
+        }
         $permutations[] = "";
 
+        return [array_values(array_unique($permutations)), array_filter([$politeness ? "." . $politeness : "", $genderness, $noun]), $politeness !== null];
+    }
+
+    /**
+     * @param string $id
+     * @param array|string $options
+     * @param array|null $parameters
+     * @param string|null $domain
+     * @param string|null $locale
+     * @return array|false|string|string[]|null
+     */
+    protected function transPerms(string $id, array|string $options = [], ?array $parameters = [], ?string $domain = null, ?string $locale = null)
+    {
+        if (!is_array($options)) {
+            $options = array_filter([$options]);
+        }
+
+        [$permutations, $in, $ownLevel] = $this->permutations($options);
+
         $trans = null;
+        // A level the call gave is the one: the site's is not asked on top of it.
+        $parameters = $ownLevel ? [self::TRANSLATION_POLITENESS => "none"] + ($parameters ?? []) : $parameters;
         foreach ($permutations as $permutation) {
             $trans = $this->transQuiet(mb_strtolower($id . $permutation), $parameters, $domain, $locale);
             if ($trans !== null) {
@@ -401,39 +591,7 @@ class Translator implements TranslatorInterface
             $options = [$options];
         }
 
-        $politeness = null;
-        if (in_array(self::POLITENESS_PLAIN, $options)) {
-            $politeness = self::POLITENESS_PLAIN;
-        } elseif (in_array(self::POLITENESS_POLITE, $options)) {
-            $politeness = self::POLITENESS_POLITE;
-        } elseif (in_array(self::POLITENESS_FORMAL, $options)) {
-            $politeness = self::POLITENESS_FORMAL;
-        }
-        $politeness = $politeness ? "." . $politeness : "";
-
-        $genderness = null;
-        if (in_array(self::GENDERNESS_INCLUSIVE, $options)) {
-            $genderness = self::GENDERNESS_INCLUSIVE;
-        } elseif (in_array(self::GENDERNESS_MASCULINE, $options)) {
-            $genderness = self::GENDERNESS_MASCULINE;
-        } elseif (in_array(self::GENDERNESS_FEMININE, $options)) {
-            $genderness = self::GENDERNESS_FEMININE;
-        } elseif (in_array(self::GENDERNESS_NEUTRAL, $options)) {
-            $genderness = self::GENDERNESS_NEUTRAL;
-        }
-        $genderness = $genderness ? "." . $genderness : "";
-
-        $noun = null;
-        if (in_array(self::NOUN_PLURAL, $options)) {
-            $noun = self::NOUN_PLURAL;
-        } elseif (in_array(self::NOUN_SINGULAR, $options)) {
-            $noun = self::NOUN_SINGULAR;
-        }
-        $noun = $noun ? "." . $noun : "";
-
-        $in = array_filter([$politeness, $genderness, $noun]);
-        $permutations = array_map(fn($a) => implode("", $a), get_permutations($in));
-        $permutations[] = "";
+        [$permutations, $in, $ownLevel] = $this->permutations($options);
 
         $trans = null;
         foreach ($permutations as $permutation) {

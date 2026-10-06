@@ -22,8 +22,11 @@ contact_confirmation:
 
 resetPassword:
     subject: "Réinitialiser ton mot de passe"
+    subject._polite: "Réinitialiser votre mot de passe"
     content: Tu as reçu cet email car tu as demandé une réinitialisation de mot de passe.
+    content._polite: "Vous avez reçu cet e-mail car vous avez demandé une réinitialisation de mot de passe."
     action_text: "Réinitialise ton mot de passe"
+    action_text._polite: "Réinitialiser votre mot de passe"
     expiry: "Le lien expirera dans {0}"
 
 register_notifyAdmins:
@@ -33,16 +36,21 @@ register_notifyAdmins:
 
 verifyEmail:
     subject: "Vérifie ton email"
+    subject._polite: "Vérifiez votre adresse e-mail"
     content: "Bravo ! Tu as reçu cet email car tu t'es inscrit sur notre site.
               Clique sur le lien suivant pour confirmer ton inscription et ton adresse e-mail."
+    content._polite: "Bravo ! Vous avez reçu cet e-mail car vous vous êtes inscrit sur notre site. Cliquez sur le lien suivant pour confirmer votre inscription et votre adresse e-mail."
     action_text: "Confirmer ton compte"
+    action_text._polite: "Confirmer votre compte"
     expiry: "Le lien expirera dans {0}"
 
 loginToken:
     subject: "Lien de connexion"
     content: "Tu as reçu cet email car tu as fait une demande de connexion par lien sur notre site.
               Clique sur le lien suivant pour te connecter."
+    content._polite: "Vous avez reçu cet e-mail car vous avez fait une demande de connexion par lien sur notre site. Cliquez sur le lien suivant pour vous connecter."
     action_text: "Se connecter à ton compte"
+    action_text._polite: "Se connecter à votre compte"
     expiry: "Le lien expirera dans {0}"
 
 adminApproval:
@@ -54,34 +62,43 @@ adminApprovalConfirm:
   subject: "Compte validé !"
   content: "Bonjour <b>{0}</b> ! Ton compte vient d'être approuvé par un administrateur.
   Tu peux à présent te connecter ! Clique sur le lien suivant pour te connecter"
+  content._polite: "Bonjour <b>{0}</b> ! Votre compte vient d'être approuvé par un administrateur. Vous pouvez à présent vous connecter ! Cliquez sur le lien suivant pour vous connecter"
   action_text: "Se connecter"
 
 accountWelcomeBack:
   subject: "Bon retour, {0} ! "
   content: "Ça faisait longtemps ! Nous sommes heureux de te voir revenir !
            Tu peux cliquer sur le lien ci-dessous pour retourner directement sur le site"
+  content._polite: "Cela faisait longtemps ! Nous sommes heureux de vous voir revenir ! Vous pouvez cliquer sur le lien ci-dessous pour retourner directement sur le site"
   action_text: Réactiver le compte !
 
 accountGoodbye:
   subject: "Aurevoir, {0} !"
   content: "Désolé de te voir partir, mais on espère te revoir vite ! Si tu changes d'avis tu pourras te reconnecter à tout instant.
            Clique sur le lien ci-dessous si tu veux revenir !"
+  content._polite: "Désolé de vous voir partir, mais nous espérons vous revoir vite ! Si vous changez d'avis, vous pourrez vous reconnecter à tout instant. Cliquez sur le lien ci-dessous si vous voulez revenir !"
   action_text: Oups, j'ai changé d'avis !
 
 thread:
   publish:
     subject: "`{1}` vient d'être publié !"
     content: "<p>Cette publication programmée dont tu es l'auteur vient d'être mise en ligne.</p><p>`{1}`</p>"
+    content._polite: "<p>Cette publication programmée dont vous êtes l'auteur vient d'être mise en ligne.</p><p>`{1}`</p>"
     action_text: Voir la publication
 
   mention:
     subject: "Bonjour {0}, tu vas être ravi !"
+    subject._polite: "Bonjour {0}, vous allez être ravi !"
     content: "Ton nom vient d'être mentionné dans une nouvelle publication `{0}` !"
+    content._polite: "Votre nom vient d'être mentionné dans une nouvelle publication `{0}` !"
     action_text: Voir la publication    
 security_newDevice:
     subject: "Nouvelle connexion à ton compte"
+    subject._polite: "Nouvelle connexion à votre compte"
     content: "Ton compte vient d'être utilisé pour se connecter depuis un navigateur que nous ne connaissions pas encore. Si c'est bien toi, il n'y a rien à faire."
+    content._polite: "Votre compte vient d'être utilisé pour se connecter depuis un navigateur que nous ne connaissions pas encore. Si c'est bien vous, il n'y a rien à faire."
     warning: "Si ce n'est pas toi, change ton mot de passe sans attendre et déconnecte cet appareil depuis tes réglages."
+    warning._polite: "Si ce n'est pas vous, changez votre mot de passe sans attendre et déconnectez cet appareil depuis vos réglages."
     action_text: "Voir mes appareils"
     field_date: "Date"
     field_agent: "Navigateur"

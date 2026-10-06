@@ -10,12 +10,14 @@ history:
   label: "Historique des modifications"
   restore: "Restaurer cette valeur"
   restored: "Valeur restaurée — pense à enregistrer"
+  restored._polite: "Valeur restaurée — pensez à enregistrer"
   empty: "Aucune modification enregistrée"
   failed: "Impossible de récupérer cette version"
 
 boolean:
   title: "Action démandée sur \"{0}\""
   text: Es-tu certain de vouloir confirmer cette action ?
+  text._polite: "Êtes-vous certain de vouloir confirmer cette action ?"
   button:
     confirm: Confirmer
     cancel: Annuler
@@ -31,6 +33,7 @@ video:
   
 wysiwyg:
   soft_linebreak: "Utilise Maj+Entrer pour faire un retour à la ligne sans changer de paragraphe"
+  soft_linebreak._polite: "Utilisez Maj+Entrer pour faire un retour à la ligne sans changer de paragraphe"
   placeholder: "Composer votre épopée.."
 
 editor:
@@ -103,6 +106,7 @@ cropper:
 
 attribute:
   empty: Sauvegarde pour mettre à jour la liste des attributs selectionnés
+  empty._polite: "Sauvegardez pour mettre à jour la liste des attributs selectionnés"
 
 select:
   placeholder: Faites votre selection..

@@ -25,6 +25,9 @@ The bundle is organised around a few long-lived pieces:
   meant: [Errors and refusals](errors.md).
 - **Time** — PHP's zone is the visitor's; a moment is stored in UTC
   (`utc_datetime_immutable`), see [Time and time zones](time.md).
+- **Politeness** — *tu* or *vous*, です / ます or 敬語: one setting of the
+  site (`base.translator.politeness`) and a variant per text
+  (`key._polite`), see [How the site addresses people](politeness.md).
 
 ## The warm-up: every class of every bundle
 

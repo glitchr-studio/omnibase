@@ -34,6 +34,8 @@ return static function (ContainerConfigurator $container): void {
             new Reference('.inner'),
             new Reference('kernel'),
             new Reference('parameter_bag'),
+            // How the site addresses people (base.translator.politeness: plain, polite, formal - or nothing).
+            '%base.translator.politeness%',
         ]);
 
     // Twig AppVariable

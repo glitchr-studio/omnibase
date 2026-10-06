@@ -3,7 +3,9 @@ invalidTimezone: "Fuseau horaire \"{0}\" invalide. Les temps sont affichés en U
 login:
     success:
         normal: Bravo {0}, tu es à présent connecté.
+        normal._polite: "Bravo {0}, vous êtes à présent connecté."
         alien: "Bienvenue visiteur venu d'ailleurs ! Pense à t'inscrire :)"
+        alien._polite: "Bienvenue visiteur venu d'ailleurs ! Pensez à vous inscrire :)"
         day:
             first: "Bonjour {0} !"
             back: "Re-bonjour {0} !"
@@ -18,18 +20,24 @@ login:
             back: "Re-bonsoir {0} !"
 
     already: Tu es déjà connecté !
+    already._polite: "Vous êtes déjà connecté !"
     partial: Tu es partiellement connecté ! Une connexion complète est requise pour accéder à cette page
+    partial._polite: "Vous êtes partiellement connecté ! Une connexion complète est requise pour accéder à cette page"
     full: "Authentication force requise pour cette action."
     social: Tu t'es bien connecté à ton compte {0}
+    social._polite: "Vous vous êtes bien connecté à votre compte {0}"
 
     pending: "Ton compte est en attente de vérification par un administrateur"
+    pending._polite: "Votre compte est en attente de vérification par un administrateur"
     disabled: "Ce compte est actuellement désactivé. Un email d'activation vient d'être envoyé à son adresse"
     banned: "Ce compte a été banni."
     locked: "Ce compte est verrouillé."
     failed: "Les identifiants sont incorrects"
 
 kickout: "{0}, tu as été jeté du site.."
+kickout._polite: "{0}, vous avez été exclu du site.."
 integrity: "Tu as été volontairement déconnecté.. L'intégrité du site était compromise"
+integrity._polite: "Vous avez été volontairement déconnecté.. L'intégrité du site était compromise"
 
 notifier:
     no_loopback: "Le debugging est activé, mais la boucle locale ne l'est pas: les utilisateurs peuvent recevoir leurs emails."
@@ -41,6 +49,7 @@ admin:
 impersonator:
     "<b>Rappel:</b> Tu es actuellement entrain d'usurper l'identité de <b>{0}</b> !
     <a class='badge bg-warning badge-warning' href='?_switch_user=_exit'>Retour à ton compte</a>"
+impersonator._polite: "<b>Rappel:</b> Vous êtes actuellement en train d'usurper l'identité de <b>{0}</b> ! <a class='badge bg-warning badge-warning' href='?_switch_user=_exit'>Retour à votre compte</a>"
 
 access_restricted:
     public_restriction:
@@ -59,6 +68,7 @@ access_restricted:
 
 loginToken:
     check: "Un lien de connexion a été envoyé à ton adresse e-mail."
+    check._polite: "Un lien de connexion a été envoyé à votre adresse e-mail."
 
 maintenance:
     banner: Ce site est en cours de <b>maintenance</b>.
@@ -67,14 +77,19 @@ launcher:
 
 logout:
     success: "Aurevoir {0}, tu es maintenant déconnecté."
+    success._polite: "Au revoir {0}, vous êtes maintenant déconnecté."
     already: "Bizarre, tu n'es pas connecté :)"
+    already._polite: "Bizarre, vous n'êtes pas connecté :)"
 
 resetPassword:
     title: "Réinitialisation de ton mot de passe"
+    title._polite: "Réinitialisation de votre mot de passe"
     csrfToken: "Jeton CSRF invalide. Impossible de réinitialiser ton mot de passe"
+    csrfToken._polite: "Jeton CSRF invalide. Impossible de réinitialiser votre mot de passe"
     invalidToken: "Jeton invalide. Vous ne pourrez pas réinitialiser votre mot de passe avec ce lien."
     confirmation: "Un email sera envoyé à l'adresse mentionée (si celle-ci est trouvée)"
     success: Ton mot de passe a bien été changé !
+    success._polite: "Votre mot de passe a bien été changé !"
 
 register:
     csrfToken: "Jeton CSRF invalide. Impossible de soumettre le formulaire"
@@ -82,50 +97,75 @@ register:
 adminApproval:
     requiredTitle: "Validation utilisateur demandée"
     required: "Ton compte requiert une validation par un administrateur. Ils ont été notifiés. Merci de patienter."
+    required._polite: "Votre compte requiert une validation par un administrateur. Ils ont été notifiés. Merci de patienter."
     approvedTitle: "Compte approuvé !"
     approved: "Ton compte vient d'être approuvé par un administration. Tu peux à présent te connecter et utiliser ton compte !"
+    approved._polite: "Votre compte vient d'être approuvé par un administrateur. Vous pouvez à présent vous connecter et utiliser votre compte !"
     verifyFirst: "L'email de ton compte doit d'abord être vérifié."
+    verifyFirst._polite: "L'e-mail de votre compte doit d'abord être vérifié."
     alreadySent: "Merci à présent de patienter le temps qu'un administrateur valide ta demande."
+    alreadySent._polite: "Merci à présent de patienter le temps qu'un administrateur valide votre demande."
 
 verifyEmail:
     title: "Confirme ton adresse mail !"
+    title._polite: "Confirmez votre adresse mail !"
     pending: Ton adresse mail doit être vérifiée. <a class='badge bg-warning badge-warning' href="{0}">Clique-ici</a> pour recevoir une nouvelle demande par email
+    pending._polite: "Votre adresse mail doit être vérifiée. <a class='badge bg-warning badge-warning' href=\"{0}\">Cliquez ici</a> pour recevoir une nouvelle demande par e-mail"
     success: "Ton adresse mail a bien été vérifiée, bravo !"
+    success._polite: "Votre adresse mail a bien été vérifiée, bravo !"
     check:   "Un email vient de t'être envoyé. Merci de confirmer ton adresse en cliquant sur le lien."
+    check._polite: "Un e-mail vient de vous être envoyé. Merci de confirmer votre adresse en cliquant sur le lien."
     already: "Ton compte est déjà validé!"
+    already._polite: "Votre compte est déjà validé !"
     alreadySent: "Merci de vérifier ton compte, tu devrais avoir reçu un e-mail pour cela !"
+    alreadySent._polite: "Merci de vérifier votre compte, vous devriez avoir reçu un e-mail pour cela !"
     resend:  "Un email de confirmation a déjà été envoyé ! Merci de patienter {0} avant la prochaine demande."
     invalidToken: "Jeton invalide. Nous ne pouvons pas confirmer ton adresse. Merci de renvoyer une demande."
+    invalidToken._polite: "Jeton invalide. Nous ne pouvons pas confirmer votre adresse. Merci de renvoyer une demande."
 
 accountGoodbye:
     success: Désolé de te voir partir {0}, mais à une prochaine ! Ton compte est à présent désactivé
+    success._polite: "Désolé de vous voir partir {0}, mais à une prochaine ! Votre compte est à présent désactivé"
     already: Ton compte est déjà désactivé..
+    already._polite: "Votre compte est déjà désactivé.."
 
 accountWelcomeBack:
     success: Oh ! Ça faisait un bail.. Bienvenue {0} ! Ton compte est à présent réactivé
+    success._polite: "Oh ! Cela faisait longtemps.. Bienvenue {0} ! Votre compte est à présent réactivé"
     already: Ton compte est déjà actif !
+    already._polite: "Votre compte est déjà actif !"
     foundToken: "Un email de réactivation a déjà été envoyé ! Merci de patienter {0} avant la prochaine demande."
     invalidToken: "Jeton invalide. Nous ne pouvons pas confirmer ton adresse avec ce lien. Merci de renvoyer une demande"
+    invalidToken._polite: "Jeton invalide. Nous ne pouvons pas confirmer votre adresse avec ce lien. Merci de renvoyer une demande"
 
 
 settings:
     twoFactorEnabled: "La double authentification est maintenant active sur ton compte."
+    twoFactorEnabled._polite: "La double authentification est maintenant active sur votre compte."
     twoFactorDisabled: "La double authentification est désactivée sur ton compte."
+    twoFactorDisabled._polite: "La double authentification est désactivée sur votre compte."
     twoFactorMandatory: "L'administrateur du site impose la double authentification : elle ne peut pas être désactivée."
     twoFactorUnavailable: "La double authentification n'est pas proposée sur ce site."
     twoFactorInvalidCode: "Ce code est incorrect. Vérifie l'heure de ton téléphone, puis réessaie."
+    twoFactorInvalidCode._polite: "Ce code est incorrect. Vérifiez l'heure de votre téléphone, puis réessayez."
     passkeysUnavailable: "Les clés d'accès ne sont pas proposées sur ce site."
     passkeyAdded: "Ta clé d'accès a bien été enregistrée."
+    passkeyAdded._polite: "Votre clé d'accès a bien été enregistrée."
     passkeyRenamed: "Ta clé d'accès a été renommée."
+    passkeyRenamed._polite: "Votre clé d'accès a été renommée."
     passkeyDeleted: "Ta clé d'accès a été supprimée."
+    passkeyDeleted._polite: "Votre clé d'accès a été supprimée."
     emailCodeEnabled: "Les codes de vérification par e-mail sont activés."
     emailCodeDisabled: "Les codes de vérification par e-mail sont désactivés."
     wrongPassword: "Mot de passe incorrect."
     enrolmentRequired: "L'administrateur impose la double authentification. Choisis une méthode pour continuer."
+    enrolmentRequired._polite: "L'administrateur impose la double authentification. Choisissez une méthode pour continuer."
     enrolmentSkipped: "Tu pourras activer la double authentification à tout moment depuis tes réglages."
+    enrolmentSkipped._polite: "Vous pourrez activer la double authentification à tout moment depuis vos réglages."
 
 newDevice:
     subject: "Nouvelle connexion à ton compte, {0}"
+    subject._polite: "Nouvelle connexion à votre compte, {0}"
 
 demo:
     locked: "Compte de démonstration : son identifiant, son adresse, son mot de passe et son second facteur ne changent pas, et il ne se supprime pas. Tout le monde s'en sert."
