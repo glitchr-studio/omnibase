@@ -87,7 +87,7 @@ resetPassword:
     csrfToken: "Jeton CSRF invalide. Impossible de réinitialiser ton mot de passe"
     csrfToken._polite: "Jeton CSRF invalide. Impossible de réinitialiser votre mot de passe"
     invalidToken: "Jeton invalide. Vous ne pourrez pas réinitialiser votre mot de passe avec ce lien."
-    confirmation: "Un email sera envoyé à l'adresse mentionée (si celle-ci est trouvée)"
+    confirmation: "Un email sera envoyé à l'adresse mentionnée (si celle-ci est trouvée)"
     success: Ton mot de passe a bien été changé !
     success._polite: "Votre mot de passe a bien été changé !"
 

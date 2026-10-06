@@ -83,12 +83,30 @@ class Translator implements TranslatorInterface
     /** Whether the translator below knows the texts rewritten in the back office (Base\Translation\OverridingTranslator). */
     private bool $asksRewritten = true;
 
-    public function __construct(\Symfony\Contracts\Translation\TranslatorInterface $translator, KernelInterface $kernel, ParameterBagInterface $parameterBag, ?string $politeness = null)
+    /**
+     * @param array<string, array<string, list<string>>> $applicationTexts the keys the application wrote in its own
+     *                                                                     translations/ directory, by domain and locale
+     *                                                                     (ApplicationTextsPass; read only when a level is set)
+     */
+    public function __construct(\Symfony\Contracts\Translation\TranslatorInterface $translator, KernelInterface $kernel, ParameterBagInterface $parameterBag, ?string $politeness = null, array $applicationTexts = [])
     {
         $this->parameterBag = $parameterBag;
         $this->translator = $translator;
         $this->isDebug = $kernel->isDebug();
         $this->politeness = self::politenessLevel($politeness);
+        $this->applicationTexts = $applicationTexts;
+    }
+
+    /** @var array<string, array<string, list<string>>> */
+    private array $applicationTexts = [];
+
+    /** @var array<string, array<string, true>> "domain|locale" => the application's keys there, as a set */
+    private array $applicationKeys = [];
+
+    /** The keys the application wrote itself in this domain and locale. */
+    private function applicationKeys(string $domain, string $locale): array
+    {
+        return $this->applicationKeys[$domain . "|" . $locale] ??= array_fill_keys($this->applicationTexts[$domain][$locale] ?? [], true);
     }
 
     /** The site's level of politeness: one of POLITENESS_*, or null when none is set. */
@@ -154,9 +172,15 @@ class Translator implements TranslatorInterface
      * Language first, level second: the catalogues are walked as Symfony
      * falls back between them, and in each the variants are looked for before
      * the base text - a German page whose text has no polite variant keeps
-     * its German text, it is not given the French polite one. A text the
-     * team rewrote in the back office counts as that language's: rewritten
-     * at its base, it wins over a variant of the files.
+     * its German text, it is not given the French polite one.
+     *
+     * Whose text it is comes next. A text the team rewrote in the back
+     * office, at its base key, wins over a variant of the files. So does a
+     * text the application wrote in its own catalogue over a bundle's
+     * variant: an application that replaced a bundle's "Tu n'as aucun
+     * message" by its own "Aucun message." keeps its sentence when the
+     * bundle brings a "._polite" of the one it replaced. Either may have a
+     * variant of its own, which is then the one.
      *
      * @return array{0: string, 1: string}|null
      */
@@ -181,6 +205,15 @@ class Translator implements TranslatorInterface
                 }
             }
             if ($this->isRewritten($id, $domain, $catalogue->getLocale())) {
+                return null;
+            }
+            $own = $this->applicationKeys($domain, $catalogue->getLocale());
+            foreach ($chain as $variant) {
+                if (isset($own[$id . "." . $variant])) {
+                    return [$id . "." . $variant, $domain];
+                }
+            }
+            if (isset($own[$id])) {
                 return null;
             }
             foreach ($chain as $variant) {

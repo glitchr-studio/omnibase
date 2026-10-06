@@ -90,12 +90,13 @@ class TranslatorPolitenessTest extends TestCase
         return $symfony;
     }
 
-    private function translator(?string $politeness = null, string $locale = 'fr', ?SymfonyTranslator $symfony = null): Translator
+    /** @param array<string, array<string, list<string>>> $applicationTexts */
+    private function translator(?string $politeness = null, string $locale = 'fr', ?SymfonyTranslator $symfony = null, array $applicationTexts = []): Translator
     {
         $kernel = $this->createMock(KernelInterface::class);
         $kernel->method('isDebug')->willReturn(false);
 
-        $translator = new Translator($symfony ?? $this->symfony(), $kernel, $this->createMock(ParameterBagInterface::class), $politeness);
+        $translator = new Translator($symfony ?? $this->symfony(), $kernel, $this->createMock(ParameterBagInterface::class), $politeness, $applicationTexts);
         $translator->setLocale($locale);
 
         return $translator;
@@ -217,6 +218,55 @@ class TranslatorPolitenessTest extends TestCase
         $this->assertSame('Votre titre', $this->translator()->transEntity('App\\Entity\\Widget', 'title', [Translator::POLITENESS_POLITE]), 'the call\'s');
         $this->assertSame('Votre titre', $this->translator()->transEntity('App\\Entity\\Widget', 'title', [Translator::POLITENESS_FORMAL]), 'formal: the polite one');
         $this->assertSame('Ton titre', $this->translator('polite')->transEntity('App\\Entity\\Widget', 'title', [Translator::POLITENESS_PLAIN]), 'plain asked on a polite site');
+    }
+
+    public function testATextTheApplicationWroteWinsOverABundlesVariant(): void
+    {
+        // A bundle's forum wording and, since, its polite variant; an application that had replaced the
+        // base text by its own. Merged, the catalogue holds the application's text and the bundle's variant.
+        $symfony = $this->symfony();
+        $symfony->addResource('array', [
+            'list.empty' => 'Aucun message.',                       // the application's, in place of "Tu n'as aucun message dans ta boîte."
+            'list.empty._polite' => 'Vous n\'avez aucun message.',  // the bundle's
+            'form.reply' => 'Ta réponse',                           // the bundle's, not replaced
+            'form.reply._polite' => 'Votre réponse',
+            'error.self' => 'Impossible.',                          // the application's, with a variant of its own
+            'error.self._polite' => 'Vous ne pouvez pas vous écrire à vous-même.',
+        ], 'fr', 'mailbox');
+
+        $own = ['mailbox' => ['fr' => ['list.empty', 'error.self', 'error.self._polite']]];
+        $translator = $this->translator('polite', 'fr', $symfony, $own);
+
+        $this->assertSame('Aucun message.', $translator->trans('@mailbox.list.empty'), 'the application\'s sentence, not the bundle\'s polite one');
+        $this->assertSame('Votre réponse', $translator->trans('@mailbox.form.reply'), 'what it did not replace keeps the bundle\'s variant');
+        $this->assertSame('Vous ne pouvez pas vous écrire à vous-même.', $translator->trans('@mailbox.error.self'), 'its own variant is the variant');
+
+        // Without knowing whose the text is, the bundle's variant came back.
+        $this->assertSame('Vous n\'avez aucun message.', $this->translator('polite', 'fr', $symfony)->trans('@mailbox.list.empty'));
+        // And without a level nothing is asked at all.
+        $this->assertSame('Aucun message.', $this->translator(null, 'fr', $symfony, $own)->trans('@mailbox.list.empty'));
+    }
+
+    public function testTheApplicationsKeysAreReadFromItsCatalogues(): void
+    {
+        $directory = sys_get_temp_dir().'/omnibase-texts-'.bin2hex(random_bytes(4));
+        mkdir($directory);
+        file_put_contents($directory.'/mailbox+intl-icu.fr.yaml', "list:\n  empty: \"Aucun message.\"\nerror:\n  self: \"Impossible.\"\n  self._polite: \"Vous ne pouvez pas.\"\n");
+        file_put_contents($directory.'/messages.en.yaml', "hello: Hello\n");
+        file_put_contents($directory.'/messages.fr-BE.json', '{"site": {"title": "Cabinet"}}');
+        file_put_contents($directory.'/notes.txt', 'not a catalogue');
+
+        try {
+            $texts = \Base\DependencyInjection\Compiler\Pass\ApplicationTextsPass::read($directory);
+        } finally {
+            array_map('unlink', glob($directory.'/*'));
+            rmdir($directory);
+        }
+
+        $this->assertSame(['list.empty', 'error.self', 'error.self._polite'], $texts['mailbox']['fr']);
+        $this->assertSame(['hello'], $texts['messages']['en']);
+        $this->assertSame(['site.title'], $texts['messages']['fr_BE']);
+        $this->assertCount(2, $texts);
     }
 
     public function testATextRewrittenInTheBackOfficeWinsOverAVariantOfTheFiles(): void

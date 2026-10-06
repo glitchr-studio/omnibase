@@ -84,9 +84,24 @@ whose text has no `_plain` variant keeps its German text - it is not given
 the French one that has it. A text missing in German altogether is read in
 the fallback language, at the level asked.
 
-A text rewritten in the back office (omnibase/admin's « Textes du site »)
-counts as that language's: rewritten at its base key, it wins over a variant
-of the files. To rewrite what a polite site shows, rewrite `key._polite`.
+## Whose text it is
+
+Within a language, the closest hand wins:
+
+1. a text rewritten in the back office (omnibase/admin's « Textes du site »):
+   its `key._polite` if it rewrote one, else its `key`;
+2. the application's own catalogue (`translations/` of the project): its
+   `key._polite`, else its `key`;
+3. the bundles': their `key._polite`, else their `key`.
+
+So an application that replaced a bundle's text under its key - a practice's
+« Aucun message. » in place of a forum's « Tu n'as aucun message dans ta
+boîte. » - keeps its sentence when the bundle brings a polite variant of the
+one it replaced, and still gets the bundle's variants for what it did not
+replace. Nothing in the merged catalogues tells whose a text is: the
+application's keys are read while the container is built
+(`ApplicationTextsPass`, from `translator.default_path`: YAML, PHP and JSON
+catalogues), and only when a level is set.
 
 ## Where it applies
 
