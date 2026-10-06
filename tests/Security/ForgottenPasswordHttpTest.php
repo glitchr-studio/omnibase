@@ -58,7 +58,7 @@ class ForgottenPasswordHttpTest extends KernelTestCase
     /**
      * The page read, its form sent with this address, and the page that follows - by a visitor of their own.
      *
-     * @return array{0: int, 1: string, 2: string, 3: string} the answer's status, where it sends, what it says, what the next page says
+     * @return array{0: int, 1: string, 2: string, 3: array<string, list<string>>, 4: string} the answer's status, where it sends, what it says, the messages left for the next page, what that page says
      */
     private function ask(string $email): array
     {
@@ -74,9 +74,32 @@ class ForgottenPasswordHttpTest extends KernelTestCase
         $this->assertArrayHasKey('email', $fields, 'the form asks for an address');
 
         $answer = $this->browse('/reset-password', ['security_reset_password' => ['email' => $email] + $fields]);
+        $flashes = $this->flashes();
         $next = $this->browse('/reset-password');
 
-        return [$answer->getStatusCode(), (string) $answer->headers->get('Location'), $this->text($answer, $email), $this->text($next, $email)];
+        return [$answer->getStatusCode(), (string) $answer->headers->get('Location'), $this->text($answer, $email), $flashes, $this->text($next, $email)];
+    }
+
+    /**
+     * The messages waiting in the visitor's session: what a layout prints on the next page. (The
+     * harness's layout prints none, so the pages alone would not show a message sent to one
+     * address and not to the other.)
+     *
+     * @return array<string, list<string>>
+     */
+    private function flashes(): array
+    {
+        self::ensureKernelShutdown();
+        $this->bootHost();
+
+        $session = static::getContainer()->get('session.factory')->createSession();
+        if (!isset($this->cookies[$session->getName()])) {
+            return [];
+        }
+        $session->setId($this->cookies[$session->getName()]);
+        $session->start();
+
+        return $session->getFlashBag()->peekAll();
     }
 
     /** What a page says, without what differs from one visit to the next: its tokens, the address typed. */
@@ -97,8 +120,18 @@ class ForgottenPasswordHttpTest extends KernelTestCase
         $forUnknown = $this->ask($unknown);
 
         $this->assertLessThan(500, $forKnown[0], $forKnown[2]);
-        $this->assertSame($forUnknown, $forKnown, 'status, redirection, the page and the one after it: nothing tells the two apart');
+        $this->assertSame($forUnknown, $forKnown, 'status, redirection, the page, its messages and the page after it: nothing tells the two apart');
 
+        // One message, the same for both: "an e-mail is sent to that address if it is found" - printed by
+        // the page, or left for the next one. The e-mail's own notification is not a second one (it was:
+        // "your password has been changed", shown for an address that has an account, and for no other).
+        $confirmation = static::getContainer()->get('translator')->trans('@notifications.resetPassword.confirmation');
+        $messages = array_merge(...array_values($forKnown[3] ?: [[]]));
+        if ($messages) {
+            $this->assertSame([$confirmation], $messages);
+        } else {
+            $this->assertStringContainsString($confirmation, html_entity_decode($forKnown[2]), 'the confirmation is on the page');
+        }
     }
 
     public function testAnAccountThatAsksIsSentItsLinkAndAnUnknownAddressNothing(): void

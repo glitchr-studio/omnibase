@@ -192,7 +192,10 @@ class Notifier extends BaseNotifier implements NotifierInterface
      */
     public function resetPasswordRequest(User $user, Token $token)
     {
-        $notification = new Notification("resetPassword.success");
+        // What the browser would be told with it is what the page says to everyone who asks ("an
+        // e-mail is sent if the address is found") - it read "your password has been changed",
+        // which it has not. SecurityController sends it by e-mail alone.
+        $notification = new Notification("resetPassword.confirmation");
         $notification->setUser($user);
 
         $notification->setHtmlTemplate("email.html.twig");

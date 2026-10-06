@@ -589,7 +589,10 @@ class SecurityController extends AbstractController
                     $resetPasswordToken = new Token("reset-password", 3600);
                     $resetPasswordToken->setUser($user);
 
-                    $this->notifier->sendResetPasswordRequest($user, $resetPasswordToken);
+                    // By e-mail alone. The page answers the same for every address - the confirmation
+                    // sent below - and this notification, sent as the others are (by e-mail and to the
+                    // browser), added a second message for an address that has an account.
+                    $this->notifier->resetPasswordRequest($user, $resetPasswordToken)->sendBy(["email+"]);
                 }
             }
 
