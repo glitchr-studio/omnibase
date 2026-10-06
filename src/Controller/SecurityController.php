@@ -296,6 +296,7 @@ class SecurityController extends AbstractController
                 $adminApprovalRequired = !$this->parameterBag->get("base.user.register.autoapprove") ?? false;
                 $newUser->approve(!$adminApprovalRequired);
                 $newUser->setPlainPassword($formProcessor->getData("plainPassword"));
+                $this->nameAccount($newUser);
 
                 // Social account connection
                 if (($user = $this->getUser()) && $user->isVerified()) {
@@ -324,6 +325,36 @@ class SecurityController extends AbstractController
             ->handleRequest($request);
 
         return $formProcessor->getResponse();
+    }
+
+    /**
+     * An application's User usually carries a username - a column of its own,
+     * unique and not null - which the sign-up form does not ask for: the
+     * account was inserted without one and the sign-up answered 500. It is
+     * given the local part of its address, numbered when somebody has it
+     * ("anne", "anne2"), as an invitation's or a demonstration's account is
+     * named. A form that asks for a username (an application's own type)
+     * keeps what was typed; a User without that column is left alone.
+     */
+    private function nameAccount(User $user): void
+    {
+        if (!method_exists($user, "setUsername") || !method_exists($user, "getUsername")) {
+            return;
+        }
+        if (!$this->entityManager->getClassMetadata($user::class)->hasField("username") || trim((string) $user->getUsername()) !== "") {
+            return;
+        }
+
+        $base = preg_replace('/[^\p{L}\p{N}._-]+/u', "", mb_strtolower((string) strstr($user->getEmail() . "@", "@", true)));
+        $base = mb_substr($base !== "" && $base !== null ? $base : "user", 0, 200);
+
+        $repository = $this->entityManager->getRepository($user::class);
+        $username = $base;
+        for ($n = 2; $repository->findOneBy(["username" => $username]); ++$n) {
+            $username = $base . $n;
+        }
+
+        $user->setUsername($username);
     }
 
     #[Route("/verify-email", name: "security_verifyEmail")]
