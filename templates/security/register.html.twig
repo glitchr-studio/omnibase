@@ -55,10 +55,7 @@
                 {{ form_widget(form.email, {'attr': {'placeholder': '@forms.register.email'|trans}}) }}
 
             </div>
-            <div class="input-group form-group mb-2">
-                <small>{{ form_help(form.email) }}</small>
-                <div class="invalid-feedback">{{ form_errors(form.email) }}</div>
-            </div>
+            {{ include('@Base/security/_field_feedback.html.twig', {field: form.email}) }}
 
             <div class="input-group form-group mb-2">
                 <div class="input-group-prepend">
@@ -70,10 +67,7 @@
                 </div>
                 {{ form_widget(form.plainPassword.second, {'attr': {'placeholder': '@forms.register.passwordConfirm'|trans}}) }}
             </div>
-            <div class="input-group form-group mb-2">
-                <small>{{ form_help(form.plainPassword.first) }}</small>
-                <div class="invalid-feedback">{{ form_errors(form.plainPassword.first) }}</div>
-            </div>
+            {{ include('@Base/security/_field_feedback.html.twig', {field: form.plainPassword.first}) }}
 
             <hr>
 

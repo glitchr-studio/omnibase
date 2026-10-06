@@ -1,0 +1,16 @@
+{#
+    What a field says under itself - its help, its errors - and nothing at all when it says nothing:
+
+        {{ include('@Base/security/_field_feedback.html.twig', {field: form.email}) }}
+
+    The block used to be printed empty (an .input-group of a set minimum height holding an empty <small> and
+    an empty .invalid-feedback): a page that frames its field groups showed an empty frame under the field.
+#}
+{% set _help %}{{ form_help(field) }}{% endset %}
+{% set _errors %}{{ form_errors(field) }}{% endset %}
+{% if _help|trim is not empty or _errors|trim is not empty %}
+<div class="input-group form-group mb-2">
+    {% if _help|trim is not empty %}<small>{{ _help }}</small>{% endif %}
+    {% if _errors|trim is not empty %}<div class="invalid-feedback">{{ _errors }}</div>{% endif %}
+</div>
+{% endif %}
