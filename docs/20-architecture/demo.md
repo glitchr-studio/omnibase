@@ -100,7 +100,11 @@ nothing else: an identifier nobody declared, or an account promoted to
 super-administrator since, is sent back to the sign-in page.
 
 The partial prints nothing outside `demo`. Its look hangs on
-`.base-demo-accounts` (it inherits the page's colours); to rewrite it,
+`.base-demo-accounts` (it inherits the page's colours). A button and its
+sentence stand side by side; in a narrow place - a sign-in card of some
+twenty rem - the sentence goes under its button, full width (the flex line
+folds when less than 14rem are left beside the button: no script, no query
+on the window). To rewrite it,
 `templates/bundles/BaseBundle/demo/_accounts.html.twig`. In a template of your
 own: `demo_mode()` (true in `demo`) and `demo_accounts()` (the list).
 

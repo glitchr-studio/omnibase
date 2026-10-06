@@ -30,10 +30,12 @@
     .base-demo-accounts h2 { margin: 0 0 .25rem; font-size: 1rem; font-weight: 700; }
     .base-demo-accounts-intro { margin: 0 0 .75rem; opacity: .75; }
     .base-demo-accounts ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
-    .base-demo-accounts form { display: flex; align-items: baseline; gap: .75rem; margin: 0; }
+    /* A button and its sentence side by side - and, where the panel is narrow (a sign-in card), the sentence under
+       its button, full width: the line folds as soon as less than 14rem are left beside the button. No script. */
+    .base-demo-accounts form { display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem .75rem; margin: 0; }
     .base-demo-accounts button { flex: 0 0 auto; min-width: 9.5rem; padding: .4rem .8rem; border: 1px solid currentColor; border-radius: 4px; background: transparent; color: inherit; font: inherit; font-weight: 600; cursor: pointer; text-align: left; }
     .base-demo-accounts button:hover, .base-demo-accounts button:focus-visible { box-shadow: inset 0 0 0 1px currentColor; text-decoration: underline; text-underline-offset: 3px; }
-    .base-demo-accounts form span { opacity: .8; line-height: 1.35; }
-    @media (max-width: 30rem) { .base-demo-accounts form { flex-direction: column; gap: .2rem; } .base-demo-accounts button { width: 100%; } }
+    .base-demo-accounts form span { flex: 1 1 14rem; opacity: .8; line-height: 1.35; }
+    @media (max-width: 30rem) { .base-demo-accounts button { width: 100%; } }
 </style>
 {% endif %}

@@ -38,6 +38,9 @@ class DemoEnvironmentHttpTest extends DemoKernelTestCase
         $this->assertStringContainsString('The agenda, the patients, the back office.', $html);
         $this->assertStringContainsString('Member of the public', $html);
         $this->assertLessThan(strpos($html, 'Member of the public'), strpos($html, 'Staff of the practice'), 'in the declared order');
+        // In a narrow sign-in card the sentence goes under its button: the line folds, the sentence asks for 14rem.
+        $this->assertMatchesRegularExpression('/\.base-demo-accounts form \{[^}]*flex-wrap: wrap/', $html);
+        $this->assertMatchesRegularExpression('/\.base-demo-accounts form span \{[^}]*flex: 1 1 14rem/', $html);
         $this->assertStringNotContainsString('demo-root', $html, 'the super-administrator is nobody\'s demonstration account');
         $this->assertSame('noindex, nofollow', $response->headers->get('X-Robots-Tag'));
 
