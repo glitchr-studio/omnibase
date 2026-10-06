@@ -32,7 +32,10 @@ case "${1:-serve}" in
         # every entity the bundles map.
         export APP_ENV=test
         export HARNESS_SUITE_BOOTSTRAP="$suite/tests/bootstrap.php"
-        rm -rf var/cache/test var/test.db
+        # The demonstration's tests compile theirs without debug
+        # (var/cache/<env>_demo_test): nothing refreshes it, and var/ is a
+        # volume that outlives the run.
+        rm -rf var/cache/test var/cache/*_demo_test var/test.db
         php bin/console doctrine:schema:create --env=test --no-interaction --quiet
         exec vendor/bin/phpunit -c "$suite/phpunit.xml.dist" --bootstrap tests/harness.php "$@" ;;
     *) exec "$@" ;;
