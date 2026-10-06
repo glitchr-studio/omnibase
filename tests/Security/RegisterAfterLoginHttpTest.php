@@ -133,6 +133,21 @@ class RegisterAfterLoginHttpTest extends KernelTestCase
         }
     }
 
+    public function testAnAddressAlreadyTakenIsSaidOnThePage(): void
+    {
+        $email = 'taken'.bin2hex(random_bytes(4)).'@example.org';
+        $this->assertSame(302, $this->signUp($email)->getStatusCode());
+
+        // Somebody signs up with that address again: the form comes back, and says why.
+        $again = $this->signUp($email);
+        $this->assertContains($again->getStatusCode(), [200, 422], $this->said($again));
+        $html = (string) $again->getContent();
+        $this->assertSame(1, preg_match('~<div class="invalid-feedback"[^>]*>(.*?)</div>~s', $html, $error), 'the page says what is wrong: '.$this->said($again));
+        $this->assertStringContainsString($email, strip_tags($error[1]), 'in words, about that address');
+        $this->assertStringContainsString('value="'.$email.'"', $html, 'what was typed is kept');
+        $this->assertCount(1, $this->entityManager()->getRepository('App\\Entity\\User')->findBy(['email' => $email]));
+    }
+
     public function testTwoAddressesWithTheSameLocalPartGetTwoNames(): void
     {
         if (!method_exists('App\\Entity\\User', 'getUsername')) {
