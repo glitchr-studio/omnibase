@@ -18,6 +18,8 @@ return [
     Google\GoogleBundle::class => ['all' => true],
     ApiPlatform\Symfony\Bundle\ApiPlatformBundle::class => ['all' => true],
     Symfony\UX\TwigComponent\TwigComponentBundle::class => ['all' => true],
+    // The guard of the forms: captchas, address lists, content classifiers (glitchr/omniguard).
+    Omniguard\Bridge\Symfony\OmniguardBundle::class => ['all' => true],
     Base\BaseBundle::class => ['all' => true],
     // The back office; the shop and the forge sell and deliver through it.
     Base\Admin\AdminBundle::class => ['all' => true],

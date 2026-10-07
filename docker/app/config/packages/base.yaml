@@ -21,3 +21,7 @@ base:
         storage: "local.uploads"
     site:
         index: demo_index
+    # The forms' guard (docs/20-architecture/guard.md): the captcha is omniguard's default
+    # (omniguard.challenge.gateway); the disposable e-mail domains are refused where an address is given.
+    guard:
+        reputation: [emails]

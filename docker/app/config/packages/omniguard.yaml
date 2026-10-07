@@ -1,0 +1,19 @@
+# The guard of the forms (glitchr/omniguard, Base\Service\FormGuard): ALTCHA as the captcha -
+# served and checked by the site itself - and the disposable e-mail domains asked at sign-up.
+# The key is the harness's, known to everyone: never a site's.
+omniguard:
+    gateways:
+        forms:
+            factory: altcha
+            options: { hmac_key: 'harness-hmac-key-known-to-everyone-not-a-secret' }
+        emails:
+            factory: disposable
+    challenge:
+        gateway: forms
+        unreachable: reject
+
+# The suites submit forms as a browser would: the fixed captcha's hidden field carries its token.
+when@test:
+    omniguard:
+        gateways:
+            forms: { factory: fixed }

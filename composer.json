@@ -28,6 +28,28 @@
             "Tests\\Base\\": "./tests"
         }
     },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/glitchr-studio/omniguard.git",
+            "no-api": true
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/glitchr-studio/omniguard-akismet.git",
+            "no-api": true
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/glitchr-studio/omniguard-altcha.git",
+            "no-api": true
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/glitchr-studio/omniguard-disposable.git",
+            "no-api": true
+        }
+    ],
     "require": {
         "php": "^8.1",
         "ext-exif": "*",
@@ -93,7 +115,11 @@
     "suggest": {
         "doctrine/doctrine-fixtures-bundle": "demo:reset reloads the fixtures (the demo environment)",
         "dompdf/dompdf": "Base\\Response\\PdfResponse: an HTML page answered as a PDF (^3.0)",
-        "symfony/lock": "demo:reset runs under a lock (the demo environment)"
+        "symfony/lock": "demo:reset runs under a lock (the demo environment)",
+        "glitchr/omniguard": "Base\\Service\\FormGuard's captcha, address lists and content classifier (the option `guard` of a form, Akismet behind SpamChecker): register Omniguard\\Bridge\\Symfony\\OmniguardBundle; not on Packagist yet - a vcs repository, https://github.com/glitchr-studio/omniguard",
+        "omniguard/altcha": "ALTCHA, the default captcha of FormGuard: a proof of work served and checked by the site, no third party, no cookie, no consent",
+        "omniguard/akismet": "Akismet behind Base\\Service\\SpamChecker (base.guard.classifier)",
+        "omniguard/disposable": "Disposable e-mail domains refused at sign-up (base.guard.reputation)"
     },
     "require-dev": {
         "phpstan/phpstan": "^1.12",
@@ -107,7 +133,11 @@
         "symfony/phpunit-bridge": "^6.0|^7.0|^8.0",
         "symfony/stopwatch": "^6.0|^7.0|^8.0",
         "symfony/var-dumper": "^6.0|^7.0|^8.0",
-        "symfony/web-profiler-bundle": "^6.0|^7.0|^8.0"
+        "symfony/web-profiler-bundle": "^6.0|^7.0|^8.0",
+        "glitchr/omniguard": "1.x-dev",
+        "omniguard/akismet": "1.x-dev",
+        "omniguard/altcha": "1.x-dev",
+        "omniguard/disposable": "1.x-dev"
     },
     "minimum-stability": "dev",
     "prefer-stable": true,

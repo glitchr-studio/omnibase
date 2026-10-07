@@ -69,6 +69,10 @@ RUN echo "omni families as of ${OMNI_REFRESH}" \
     && composer require "glitchr/omnibase:3.x-dev as 3.0.x-dev" $(for p in $PLUGINS; do printf '%s:*@dev ' "$p"; done) \
         "glitchr/omnitrade:1.x-dev" "omnitrade/stripe:1.x-dev" "glitchr/omnibus:2.x-dev" "omnibus/offline:2.x-dev" "omnibus/mondial-relay:2.x-dev" \
         omnipay/stripe symfony/translation symfony/messenger symfony/lock --no-interaction --no-progress --no-scripts \
+    # The guard of the forms (Base\Service\FormGuard): glitchr/omniguard and three of its gateways,
+    # from their repositories - not on Packagist yet; cloned over https (no-api: no GitHub token here).
+    && for r in omniguard omniguard-akismet omniguard-altcha omniguard-disposable; do composer config "repositories.$r" "{\"type\": \"vcs\", \"url\": \"https://github.com/glitchr-studio/$r.git\", \"no-api\": true}"; done \
+    && composer require "glitchr/omniguard:1.x-dev" "omniguard/akismet:1.x-dev" "omniguard/altcha:1.x-dev" "omniguard/disposable:1.x-dev" --no-interaction --no-progress --no-scripts \
     # PHPUnit, for `demo test <plugin>`: a plugin's suite run against this
     # very application (its checkout mounted by compose.checkouts.yml).
     && composer require --dev "phpunit/phpunit:^9.6" --no-interaction --no-progress --no-scripts \
