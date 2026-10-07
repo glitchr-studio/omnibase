@@ -297,7 +297,7 @@ final class DownFactory implements GatewayFactoryInterface
 
     public function create(array $options = []): GatewayInterface
     {
-        return new class implements ReputationInterface {
+        return new class implements ReputationInterface, \Omniguard\ClassifierInterface {
             public function getName(): string
             {
                 return 'down';
@@ -310,10 +310,20 @@ final class DownFactory implements GatewayFactoryInterface
 
             public function capabilities(): Capabilities
             {
-                return new Capabilities(reputation: true);
+                return new Capabilities(classifier: true, reputation: true);
             }
 
             public function lookup(Identity $identity): Reputation
+            {
+                throw new UnreachableException('down', 'No answer.');
+            }
+
+            public function classify(\Omniguard\Model\Submission $submission): \Omniguard\Model\Classification
+            {
+                throw new UnreachableException('down', 'No answer.');
+            }
+
+            public function report(\Omniguard\Model\Submission $submission, bool $spam): void
             {
                 throw new UnreachableException('down', 'No answer.');
             }

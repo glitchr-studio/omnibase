@@ -5,6 +5,10 @@ namespace Base\Enum;
 use Base\Database\Type\EnumType;
 use Base\Service\Model\IconizeInterface;
 
+/**
+ * @deprecated the classifier is a gateway of glitchr/omniguard, named by base.guard.classifier
+ *             (Akismet by default): SpamChecker no longer reads this value
+ */
 class SpamApi extends EnumType implements IconizeInterface
 {
     public const AKISMET = "AKISMET";

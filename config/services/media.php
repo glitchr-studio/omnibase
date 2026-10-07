@@ -172,8 +172,11 @@ return static function (ContainerConfigurator $container): void {
             new Reference('parameter_bag'),
             new Reference('translator'),
             new Reference('monolog.http_client'),
-        ])
-        ->bind('$debug', '%kernel.debug%');
+            '%kernel.debug%',
+            new Reference('Base\Service\FormGuard'),
+            new Reference('advanced_router', ContainerInterface::NULL_ON_INVALID_REFERENCE),
+            new Reference('logger', ContainerInterface::NULL_ON_INVALID_REFERENCE),
+        ]);
 
     $services->set('Base\Service\Sitemapper')
         ->public()

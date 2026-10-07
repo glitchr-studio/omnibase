@@ -198,16 +198,18 @@ class Comment implements SpamProtectionInterface
     public function getSpamDate(): \DateTime { return \DateTime::createFromInterface($this->createdAt ?? new \DateTime()); }
 
     /**
-     * Akismet's verdict. NOT_SPAM goes online when the site auto-approves;
-     * MAYBE_SPAM waits; NO_TEXT (no key, or an empty text) is treated as
-     * clean - the form already refused an empty text.
+     * The classifier's verdict (Akismet). NOT_SPAM goes online when the site
+     * auto-approves, else waits (PENDING); spam is kept aside (SPAM), for a
+     * person to read - and to report as ham if it was not; NO_TEXT (no
+     * classifier, or an empty text) is treated as clean - the form already
+     * refused an empty text.
      */
     public function getSpamCallback(int $score): void
     {
         $this->spamScore = $score;
         $scores = SpamScore::__toInt();
         $this->state = match (true) {
-            $score >= $scores[SpamScore::MAYBE_SPAM] => CommentState::PENDING,
+            $score >= $scores[SpamScore::MAYBE_SPAM] => CommentState::SPAM,
             $this->autoApprove => CommentState::APPROVED,
             default => CommentState::PENDING,
         };
