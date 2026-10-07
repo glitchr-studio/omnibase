@@ -23,11 +23,18 @@ $.fn.flashNotification = function(method) {
 
             $(document).ajaxComplete(function(event, xhr, settings) {
 
-                if(!xhr || xhr.getResponseHeader("Content-Type") != "application/json")
+                // "application/json; charset=UTF-8" counts too.
+                var type = xhr ? String(xhr.getResponseHeader("Content-Type") || "") : "";
+                if (type.split(";")[0].trim() != "application/json")
                     return;
 
-                var data = $.parseJSON(xhr.responseText);
-                if (data.flashbag) {
+                // JSON.parse, not $.parseJSON: jQuery 4 (the version this
+                // bundle is built with) no longer has it, and every JSON
+                // answer - a like, a follow - threw here, so the messages
+                // they carry were never shown.
+                var data;
+                try { data = JSON.parse(xhr.responseText); } catch (e) { return; }
+                if (data && data.flashbag) {
                     var flashbag = data.flashbag;
 
                     var i;
