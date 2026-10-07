@@ -47,6 +47,18 @@ class FormGuard
     public const UNREACHABLE = 'unreachable';
     public const SPAM = 'spam';
 
+    /** The captcha's answers: no token, a token refused, a provider that did not answer. */
+    public const CHALLENGE_MISSING = 'challenge_missing';
+    public const CHALLENGE_FAILED = 'challenge_failed';
+    public const CHALLENGE_UNREACHABLE = 'challenge_unreachable';
+
+    /** What they say: glitchr/omniguard's own sentences (PassesChallenge), translated in the "validators" domain. */
+    public const CHALLENGE_MESSAGES = [
+        self::CHALLENGE_MISSING => 'Please confirm that you are not a robot.',
+        self::CHALLENGE_FAILED => 'The check that you are not a robot did not pass. Please try again.',
+        self::CHALLENGE_UNREACHABLE => 'The check that you are not a robot could not be done just now. Please try again in a moment.',
+    ];
+
     /** The fields the option `guard` adds to a form: the trap, the stamp, the captcha. */
     public const TRAP_FIELD = 'guard_website';
     public const STAMP_FIELD = 'guard_opened';
@@ -63,6 +75,7 @@ class FormGuard
         protected readonly ?CommentRepository $comments = null,
         protected readonly ?string $defaultChallenge = null,
         protected readonly ?LoggerInterface $logger = null,
+        protected readonly bool $acceptUnreachableChallenge = false,
     ) {
     }
 
@@ -211,6 +224,37 @@ class FormGuard
         }
 
         return null;
+    }
+
+    /**
+     * The captcha's token, asked of its gateway - once, after the trap, the
+     * time and the lists: a robot they caught spends nothing at the provider.
+     * Null when it holds; otherwise one of CHALLENGE_*. A provider that does
+     * not answer follows omniguard.challenge.unreachable; a key refused is
+     * the site's error, let through and logged.
+     */
+    public function challenge(string $gateway, ?string $token, ?Request $request, ?string $action = null): ?string
+    {
+        $token = trim((string) $token);
+        if ('' === $token) {
+            return self::CHALLENGE_MISSING;
+        }
+        try {
+            $verdict = $this->registry->challenge($gateway)->verify(new \Omniguard\Model\Attempt($token, $request?->getClientIp(), $action));
+        } catch (InvalidKeyException $e) {
+            $this->logger?->error('Form guard: the captcha "{gateway}" refused the site\'s key: {message}', ['gateway' => $gateway, 'message' => $e->getMessage()]);
+
+            return null;
+        } catch (ProviderException $e) {
+            $this->logger?->warning('Form guard: the captcha "{gateway}" did not answer: {message}', ['gateway' => $gateway, 'message' => $e->getMessage()]);
+
+            return $this->acceptUnreachableChallenge ? null : self::CHALLENGE_UNREACHABLE;
+        }
+        if ($verdict->passed) {
+            return null;
+        }
+
+        return $verdict->failedFor(\Omniguard\Model\Verdict::MISSING) ? self::CHALLENGE_MISSING : self::CHALLENGE_FAILED;
     }
 
     /**

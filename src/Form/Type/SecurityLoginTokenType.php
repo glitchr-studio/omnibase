@@ -24,7 +24,10 @@ class SecurityLoginTokenType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => SecurityLoginTokenModel::class,
-            'allow_login_token' => false
+            'allow_login_token' => false,
+            // The forms' guard (Base\Service\FormGuard): a trap, the time, the captcha - no list, as the
+            // forgotten password: the same answer for every address.
+            'guard' => ['action' => 'login_link', 'reputation' => false],
         ]);
     }
 

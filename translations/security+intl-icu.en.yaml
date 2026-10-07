@@ -1,3 +1,5 @@
 "Invalid CSRF token.": "Invalid CSRF token provided. Please try to resubmit the form."
 "Invalid credentials.": "Unable to login, incorrect credentials."
 "This account is not available in the demonstration.": "This account is not available in the demonstration."
+# The sign-in's captcha after a few failures (Base\Security\SignInGuard).
+"Please confirm that you are not a robot.": "Please confirm that you are not a robot."

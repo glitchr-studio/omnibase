@@ -25,3 +25,11 @@ base:
     # (omniguard.challenge.gateway); the disposable e-mail domains are refused where an address is given.
     guard:
         reputation: [emails]
+
+# The suites submit a form the moment they read it, and sign in wrong on purpose from one address:
+# no delay, no captcha at the sign-in (FormGuardTest and SignInGuardTest check both).
+when@test:
+    base:
+        guard:
+            min_delay: 0
+            sign_in_after: 0

@@ -9,6 +9,7 @@ use Base\Form\FormProxyInterface;
 use Base\Notifier\NotifierInterface;
 use Base\Routing\AdvancedRouterInterface;
 use Base\Security\LoginFormAuthenticator;
+use Base\Security\SignInGuard;
 
 use App\Form\Type\SecurityRegistrationType;
 use App\Form\Type\SecurityLoginType;
@@ -121,7 +122,7 @@ class SecurityController extends AbstractController
 
     #[Route("/login", name: "security_login")]
     #[Iconize("fa-solid fa-fw fa-arrow-right-to-bracket")]
-    public function Login(Request $request, ReferrerInterface $referrer, AuthenticationUtils $authenticationUtils): Response
+    public function Login(Request $request, ReferrerInterface $referrer, AuthenticationUtils $authenticationUtils, ?SignInGuard $signInGuard = null): Response
     {
         // In case of maintenance, still allow some users to login
         if ($this->isGranted("EXCEPTION_ACCESS")) {
@@ -147,7 +148,11 @@ class SecurityController extends AbstractController
         $formProcessor = $this->formProxy
             ->createProcessor("form:login", SecurityLoginType::class, [
                 "identifier" => $lastUsername,
-                "allow_login_token" => $this->parameterBag->get("base.user.login_with_token")
+                "allow_login_token" => $this->parameterBag->get("base.user.login_with_token"),
+                // After a few failed sign-ins from this address, the captcha (SignInGuard checks it).
+                "guard" => null !== ($gateway = $signInGuard?->required($request))
+                    ? ["trap" => false, "min_delay" => 0, "reputation" => false, "challenge" => $gateway, "action" => SignInGuard::ACTION]
+                    : false,
             ])
             ->handleRequest($request);
 

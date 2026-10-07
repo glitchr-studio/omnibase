@@ -127,16 +127,30 @@ class FormTypeGuardExtension extends AbstractTypeExtension
         $gateway = false === $guard['challenge'] ? null : (\is_string($guard['challenge']) ? $guard['challenge'] : $this->guard->challengeGateway());
         $google = (bool) ($options['captcha_protection'] ?? false);
         if (null !== $gateway && !$google && class_exists(\Omniguard\Bridge\Symfony\Form\ChallengeType::class)) {
+            // Checked by the guard itself (below), not by the field's constraint: in the guard's order,
+            // and whatever the form's validation groups - a constraint of the Default group is not
+            // asked by a form validated in "new" alone (the sign-up).
             $builder->add(FormGuard::CHALLENGE_FIELD, \Omniguard\Bridge\Symfony\Form\ChallengeType::class, [
                 'gateway' => $gateway,
                 'action' => $guard['action'] ?? $this->action($builder->getName()),
+                'constraints' => [],
             ]);
         }
 
         // Before the validation: a robot caught here does not reach the captcha's provider.
         $builder->addEventListener(FormEvents::POST_SUBMIT, function (FormEvent $event) use ($guard): void {
             $form = $event->getForm();
-            $found = $this->guard->inspect($form, $this->requests?->getCurrentRequest(), $guard['min_delay'], (string) $guard['email'], (string) $guard['name'], (bool) $guard['reputation']);
+            $request = $this->requests?->getCurrentRequest();
+            $found = $this->guard->inspect($form, $request, $guard['min_delay'], (string) $guard['email'], (string) $guard['name'], (bool) $guard['reputation']);
+            if (null === $found && $form->has(FormGuard::CHALLENGE_FIELD)) {
+                $field = $form->get(FormGuard::CHALLENGE_FIELD);
+                $options = $field->getConfig()->getOptions();
+                if (null !== $answer = $this->guard->challenge($options['gateway'], $field->getData(), $request, $options['action'])) {
+                    $field->addError(new FormError($this->translator?->trans(FormGuard::CHALLENGE_MESSAGES[$answer], [], 'validators') ?? FormGuard::CHALLENGE_MESSAGES[$answer], FormGuard::CHALLENGE_MESSAGES[$answer], [], null, $answer));
+                }
+
+                return;
+            }
             if (null === $found) {
                 return;
             }

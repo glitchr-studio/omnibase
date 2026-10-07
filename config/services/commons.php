@@ -42,6 +42,10 @@ return static function (ContainerConfigurator $container): void {
         ->arg('$comments', service('Base\Repository\Thread\CommentRepository')->nullOnInvalid())
         ->arg('$logger', service('logger')->nullOnInvalid());
     $services->set('Base\Service\CommentGuard')->public();
+    // The sign-in's captcha after a few failures from an address (base.guard.sign_in_after).
+    $services->set('Base\Security\SignInGuard')->public()
+        ->arg('$cache', service('cache.app')->nullOnInvalid())
+        ->arg('$logger', service('logger')->nullOnInvalid());
     $services->set('Base\Service\Embeds')->public()
         ->arg('$cache', service('cache.app')->nullOnInvalid())
         ->arg('$logger', service('logger')->nullOnInvalid());

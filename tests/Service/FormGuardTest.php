@@ -181,12 +181,12 @@ class FormGuardTest extends TestCase
     public function testTheCaptchaMissingOrFalseIsAnErrorOnItsField(): void
     {
         $missing = $this->send($this->form($this->forms()));
-        $this->assertSame([FormGuard::CHALLENGE_FIELD => ['Please confirm that you are not a robot.']], $this->errors($missing));
-        $this->assertSame(PassesChallenge::MISSING_ERROR, $missing->get(FormGuard::CHALLENGE_FIELD)->getErrors()[0]->getCause()->getCode());
+        $this->assertSame([FormGuard::CHALLENGE_FIELD => [FormGuard::CHALLENGE_MISSING]], $this->errors($missing));
+        $this->assertSame('Please confirm that you are not a robot.', $missing->get(FormGuard::CHALLENGE_FIELD)->getErrors()[0]->getMessage(), 'omniguard\'s sentence, translated in "validators"');
 
         $this->registry(['forms' => ['factory' => 'fixed', 'options' => ['pass' => false]]]);
         $false = $this->send($this->form($this->forms()), post: $this->token());
-        $this->assertSame(PassesChallenge::FAILED_ERROR, $false->get(FormGuard::CHALLENGE_FIELD)->getErrors()[0]->getCause()->getCode());
+        $this->assertSame([FormGuard::CHALLENGE_FIELD => [FormGuard::CHALLENGE_FAILED]], $this->errors($false));
     }
 
     public function testAnAltchaSolutionPassesOnceAndIsRefusedWhenPostedAgain(): void
@@ -204,7 +204,19 @@ class FormGuardTest extends TestCase
         $this->assertTrue($first->isValid(), json_encode($this->errors($first)));
 
         $again = $this->send($this->form($this->forms()), post: $post);
-        $this->assertSame(PassesChallenge::FAILED_ERROR, $again->get(FormGuard::CHALLENGE_FIELD)->getErrors()[0]->getCause()->getCode(), 'a token is spent once');
+        $this->assertSame([FormGuard::CHALLENGE_FIELD => [FormGuard::CHALLENGE_FAILED]], $this->errors($again), 'a token is spent once');
+    }
+
+    public function testTheCaptchaIsCheckedWhateverTheValidationGroupsAndAfterTheTrap(): void
+    {
+        // A form validated in a group of its own (the sign-up: "new"): the captcha is asked all the same.
+        $form = $this->forms()->createNamedBuilder('signup', FormType::class, null, ['guard' => true, 'spam_protection' => false, 'validation_groups' => ['new']])
+            ->add('name', TextType::class)->add('email', EmailType::class)->getForm();
+        $this->assertSame([FormGuard::CHALLENGE_FIELD => [FormGuard::CHALLENGE_MISSING]], $this->errors($this->send($form)));
+
+        // Caught by the trap: the form's only error - the captcha is not asked.
+        $trapped = $this->send($this->form($this->forms()), [FormGuard::TRAP_FIELD => 'x']);
+        $this->assertSame(['' => [FormGuard::TRAPPED]], $this->errors($trapped));
     }
 
     public function testADisposableAddressIsRefusedOnItsField(): void

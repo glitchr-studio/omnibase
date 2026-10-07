@@ -73,7 +73,8 @@ class ForgottenPasswordHttpTest extends KernelTestCase
         }
         $this->assertArrayHasKey('email', $fields, 'the form asks for an address');
 
-        $answer = $this->browse('/reset-password', ['security_reset_password' => ['email' => $email] + $fields]);
+        // With the token the test environment's captcha (omniguard's fixed gateway) prints in the page, outside the form.
+        $answer = $this->browse('/reset-password', ['security_reset_password' => ['email' => $email] + $fields, 'omniguard-token' => 'omniguard-fixed-token']);
         $flashes = $this->flashes();
         $next = $this->browse('/reset-password');
 

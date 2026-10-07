@@ -75,7 +75,7 @@ class RegisterAfterLoginHttpTest extends KernelTestCase
     }
 
     /** The sign-up page read, its form filled and sent, as a visitor does - with a new session each time. */
-    private function signUp(string $email): Response
+    private function signUp(string $email, array $more = ['omniguard-token' => 'omniguard-fixed-token']): Response
     {
         $this->cookies = [];
         $this->browse('/login');
@@ -83,6 +83,8 @@ class RegisterAfterLoginHttpTest extends KernelTestCase
         $this->assertSame(200, $page->getStatusCode(), $this->said($page));
 
         preg_match('/name="_base_security_registration\[_csrf_token\]"[^>]*value="([^"]+)"/', (string) $page->getContent(), $token);
+        // The guard's stamp (when the form was shown) and the test environment's captcha token, as the page prints them.
+        preg_match('/name="_base_security_registration\[guard_opened\]"[^>]*value="([^"]+)"/', (string) $page->getContent(), $stamp);
         $this->signedUp[] = $email;
 
         return $this->browse('/register', ['_base_security_registration' => [
@@ -90,7 +92,8 @@ class RegisterAfterLoginHttpTest extends KernelTestCase
             'plainPassword' => ['first' => 'A-long-Passphrase-42!', 'second' => 'A-long-Passphrase-42!'],
             'agreeTerms' => '1',
             '_csrf_token' => html_entity_decode($token[1] ?? ''),
-        ]], '/register');
+            'guard_opened' => html_entity_decode($stamp[1] ?? ''),
+        ]] + $more, '/register');
     }
 
     private function account(string $email): ?object
@@ -172,15 +175,41 @@ class RegisterAfterLoginHttpTest extends KernelTestCase
         $this->assertStringNotContainsString('signup-account-exists', (string) $page->getContent());
 
         preg_match('/name="_base_security_registration\[_csrf_token\]"[^>]*value="([^"]+)"/', (string) $page->getContent(), $token);
+        // The guard's stamp (when the form was shown) and the test environment's captcha token, as the page prints them.
+        preg_match('/name="_base_security_registration\[guard_opened\]"[^>]*value="([^"]+)"/', (string) $page->getContent(), $stamp);
         $refused = $this->browse('/register', ['_base_security_registration' => [
             'email' => 'new'.bin2hex(random_bytes(4)).'@example.org',
             'plainPassword' => ['first' => 'A-long-Passphrase-42!', 'second' => 'Another-Passphrase-43!'],
             'agreeTerms' => '1',
             '_csrf_token' => html_entity_decode($token[1] ?? ''),
-        ]], '/register');
+            'guard_opened' => html_entity_decode($stamp[1] ?? ''),
+        ], 'omniguard-token' => 'omniguard-fixed-token'], '/register');
 
         $this->assertContains($refused->getStatusCode(), [200, 422], $this->said($refused));
         $this->assertStringNotContainsString('signup-account-exists', (string) $refused->getContent());
+    }
+
+    /**
+     * The sign-up is guarded by default (Base\Service\FormGuard): the harness's lists refuse a
+     * disposable domain, on the e-mail field, in words; without the captcha's token it is refused too.
+     */
+    public function testTheSignUpIsGuarded(): void
+    {
+        if (!class_exists(\Omniguard\Registry::class)) {
+            self::markTestSkipped('glitchr/omniguard is not installed.');
+        }
+        $translator = static::getContainer()->get('translator');
+
+        $disposable = $this->signUp($throwaway = 'someone'.bin2hex(random_bytes(3)).'@mailinator.com');
+        $this->assertContains($disposable->getStatusCode(), [200, 422], $this->said($disposable));
+        $this->assertNull($this->account($throwaway), 'no account for a disposable address');
+        $this->assertStringContainsString(htmlspecialchars($translator->trans('@forms.guard.disposable'), \ENT_QUOTES), (string) $disposable->getContent(), 'said, in words');
+
+        $email = 'robot'.bin2hex(random_bytes(3)).'@example.org';
+        $noToken = $this->signUp($email, []);
+        $this->assertContains($noToken->getStatusCode(), [200, 422], $this->said($noToken));
+        $this->assertNull($this->account($email), 'no account without the captcha');
+        $this->assertStringContainsString(htmlspecialchars($translator->trans('Please confirm that you are not a robot.', [], 'validators'), \ENT_QUOTES), (string) $noToken->getContent());
     }
 
     public function testTwoAddressesWithTheSameLocalPartGetTwoNames(): void
