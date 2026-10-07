@@ -1,5 +1,7 @@
 # The guard of the forms (glitchr/omniguard, Base\Service\FormGuard): ALTCHA as the captcha -
-# served and checked by the site itself - and the disposable e-mail domains asked at sign-up.
+# issued and checked by the site, its widget's script served by the site too
+# (/omniguard/altcha/3.3.0/altcha.min.js, from omniguard/altcha: no CDN) - and the disposable
+# e-mail domains asked at sign-up.
 # The key is the harness's, known to everyone: never a site's.
 omniguard:
     gateways:

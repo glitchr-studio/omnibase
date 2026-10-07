@@ -107,14 +107,18 @@ Not the rescue door, not the demonstration's one click; nothing where ux-google'
 
 ## Consent
 
+ALTCHA, the default, reaches nobody: omniguard's Symfony bridge serves its widget's script from
+the site (omniguard/altcha ships it: `/omniguard/altcha/3.3.0/altcha.min.js`), so the page loads
+nothing from anyone else and there is no consent to ask. Nothing to add on a site but
+omniguard's bundle; `omniguard.serve_scripts: false` would put the CDN back.
+
 A captcha whose widget reaches a third party (`Widget::reachesOthers()`: Turnstile, reCAPTCHA,
-ALTCHA's script from a CDN) waits for the visitor's consent - omnibase/consent's feature
+ALTCHA's script when a site names a CDN) waits for the visitor's consent - omnibase/consent's feature
 `CAPTCHA`, declared by `Consent.use()` - kept inert in a `<template>` until then. Beside it, the
 fallback that reaches nobody (`base.guard.fallback`, ALTCHA) is shown, and stays after a refusal:
 a refusal does not open the form. The guard asks the third party's token when there is one, the
 fallback's otherwise. Without a fallback, a widget that sets cookies (reCAPTCHA) waits all the
-same; one that sets none is loaded at once - serve ALTCHA's script from the site and it reaches
-nobody. A page without omnibase/consent's script shows the fallback alone.
+same; one that sets none is loaded at once. A page without omnibase/consent's script shows the fallback alone.
 
 ## In a site's tests
 
