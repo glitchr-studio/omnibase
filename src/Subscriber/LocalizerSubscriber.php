@@ -25,6 +25,9 @@ class LocalizerSubscriber implements EventSubscriberInterface
     /** The request attribute holding the language a page was shown in, for the response to remember. */
     public const DISPLAYED_LOCALE = "_base_displayed_locale";
 
+    /** What Symfony's Request::create() says when it is told no language. */
+    public const REQUEST_DEFAULT_LANGUAGE = "en-us,en;q=0.5";
+
     /**
      * @var LocalizerInterface
      */
@@ -138,7 +141,9 @@ class LocalizerSubscriber implements EventSubscriberInterface
             $locale ??= $this->available($user->getLocale());
         }
 
-        if ($locale === null && $request->headers->has("Accept-Language")) {
+        // Symfony's Request::create() puts "en-us,en;q=0.5" on every request it makes
+        // that says nothing (a test client's, a sub-request's): no word from a browser.
+        if ($locale === null && $request->headers->has("Accept-Language") && self::REQUEST_DEFAULT_LANGUAGE !== $request->headers->get("Accept-Language")) {
             $langs = $this->localizer->getAvailableLocaleLangs();
             $preferred = $request->getPreferredLanguage($langs);
             $locale = $this->available($preferred);
