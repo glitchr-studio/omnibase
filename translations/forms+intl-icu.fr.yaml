@@ -156,3 +156,14 @@ comment:
 privacy:
     notice: "Les informations transmises servent uniquement à vous répondre et ne sont communiquées à personne. Vous pouvez à tout moment en demander la rectification ou la suppression."
     consent: "J'accepte que ces informations servent à me répondre."
+
+# The forms' guard (Base\Service\FormGuard, the option `guard`; docs/20-architecture/guard.md).
+guard:
+    trapped: "Le formulaire n'a pas pu être envoyé."
+    too_fast: "Ce formulaire a été envoyé un peu vite : merci de patienter quelques secondes avant de l'envoyer à nouveau."
+    stale: "Ce formulaire n'a pas pu être vérifié : merci de recharger la page avant de l'envoyer à nouveau."
+    flood: "Un message vient d'être envoyé depuis cette adresse : merci de patienter une minute avant le suivant."
+    known: "Cet envoi ne peut pas être accepté depuis cette adresse."
+    disposable: "Les adresses e-mail jetables ne sont pas acceptées : merci d'en indiquer une autre."
+    unreachable: "La vérification de ce formulaire n'a pas pu être faite pour l'instant : merci de réessayer dans un moment."
+    spam: "Ce message a été refusé comme indésirable."

@@ -141,3 +141,14 @@ comment:
 privacy:
     notice: "The information you send is used only to answer you, and is passed on to no one. You may ask at any time for it to be corrected or deleted."
     consent: "I agree that this information is used to answer me."
+
+# The forms' guard (Base\Service\FormGuard, the option `guard`; docs/20-architecture/guard.md).
+guard:
+    trapped: "The form could not be sent."
+    too_fast: "This form was sent a little fast: please wait a few seconds before sending it again."
+    stale: "This form could not be checked: please reload the page before sending it again."
+    flood: "A message was just sent from this address: please wait a minute before the next one."
+    known: "This cannot be accepted from this address."
+    disposable: "Disposable e-mail addresses are not accepted: please give another one."
+    unreachable: "This form could not be checked just now: please try again in a moment."
+    spam: "This message was refused as spam."

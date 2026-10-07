@@ -36,6 +36,11 @@ return static function (ContainerConfigurator $container): void {
         ->arg('$signer', service('uri_signer'));
     $services->set('Base\Service\Qr\QrCode')->public();
     $services->set('Base\Service\Qr\QrSheet')->public();
+    // glitchr/omniguard is suggested, not required: its registry when its bundle is registered.
+    $services->set('Base\Service\FormGuard')->public()
+        ->arg('$registry', service('Omniguard\Registry')->nullOnInvalid())
+        ->arg('$comments', service('Base\Repository\Thread\CommentRepository')->nullOnInvalid())
+        ->arg('$logger', service('logger')->nullOnInvalid());
     $services->set('Base\Service\CommentGuard')->public();
     $services->set('Base\Service\Embeds')->public()
         ->arg('$cache', service('cache.app')->nullOnInvalid())

@@ -45,3 +45,8 @@ widget_slot:
 
 privacy:
    consent_required: "Merci d'accepter que vos informations servent à vous répondre."
+
+# glitchr/omniguard's captcha (PassesChallenge, the field guard_captcha): its messages are its English sentences.
+"Please confirm that you are not a robot.": "Merci de confirmer que vous n'êtes pas un robot."
+"The check that you are not a robot did not pass. Please try again.": "La vérification anti-robot n'a pas abouti. Merci de réessayer."
+"The check that you are not a robot could not be done just now. Please try again in a moment.": "La vérification anti-robot n'a pas pu être faite pour l'instant. Merci de réessayer dans un moment."

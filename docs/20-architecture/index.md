@@ -25,6 +25,8 @@ The bundle is organised around a few long-lived pieces:
   meant: [Errors and refusals](errors.md).
 - **Time** — PHP's zone is the visitor's; a moment is stored in UTC
   (`utc_datetime_immutable`), see [Time and time zones](time.md).
+- **The forms' guard** — a trap, the time, the lists, a captcha, the classifier, one option
+  (`guard`): [The forms' guard](guard.md).
 - **Politeness** — *tu* or *vous*, です / ます or 敬語: one setting of the
   site (`base.translator.politeness`) and a variant per text
   (`key._polite`), see [How the site addresses people](politeness.md).

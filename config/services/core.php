@@ -436,9 +436,17 @@ return static function (ContainerConfigurator $container): void {
     // Form extensions
     $services->set('Base\Form\Extension\FormTypeTranslateExtension')->tag('form.type_extension');
 
-    $services->set('Base\Form\Extension\FormTypeSpamExtension')
+    // The forms' guard: the option `guard` (trap, time, lists, captcha) and `spam_protection`
+    // (the classifier), Base\Service\FormGuard. FormTypeSpamExtension is folded into it.
+    $services->set('Base\Form\Extension\FormTypeGuardExtension')
         ->tag('form.type_extension')
-        ->args([service('spam_checker'), service('advanced_router')]);
+        ->args([
+            service('Base\Service\FormGuard'),
+            service('spam_checker'),
+            service('advanced_router'),
+            service('translator')->nullOnInvalid(),
+            service('request_stack')->nullOnInvalid(),
+        ]);
 
     // Outgoing-mail trap: a hold-everything switch for the minutes after a
     // hotfix, when you want to see what the site is about to send before it
