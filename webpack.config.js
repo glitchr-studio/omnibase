@@ -41,6 +41,14 @@ Encore.addPlugin(new WebpackBar())
     .copyFiles({from: './assets/styles/images/bundles/', to: 'images/bundles/[path][name].[ext]'})
     .copyFiles({from: './assets/styles/images/', to: 'images/[path][name].[ext]', pattern: /\.(svg|webp|jpg|png|gif)$/})
 
+    // The plain files copied above are published as they are, readable: not minified.
+    .configureTerserPlugin((options) => {
+        options.exclude = /^js\/media\.js$/;
+    })
+    .configureCssMinimizerPlugin((options) => {
+        options.exclude = /^css\/credits\.css$/;
+    })
+
     .disableSingleRuntimeChunk()
 
     // enables and configure @babel/preset-env polyfills
