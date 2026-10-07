@@ -260,10 +260,15 @@ class SecurityController extends AbstractController
 
                         $this->entityManager->flush();
 
-                        $notification = $this->notifier->sendLoginToken($user, $loginToken);
-                        $notification->send("success");
+                        // By e-mail alone. It was sent to the browser too, twice ("a link has been sent
+                        // to your address"), for an address that has an account and for no other.
+                        $this->notifier->loginToken($user, $loginToken)->sendBy(["email+"]);
                     }
                 }
+
+                // One answer for every address, whether it has an account or not.
+                $notification = new Notification("loginToken.confirmation");
+                $notification->send("success");
 
                 return $this->redirectToRoute($referrer->getUrl() ?? $this->router->getUrlIndex());
             })

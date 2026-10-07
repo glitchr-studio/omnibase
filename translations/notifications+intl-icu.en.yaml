@@ -86,6 +86,8 @@ adminApproval:
     alreadySent: "You already asked administrators for approval, please be patient."
 
 loginToken:
+    # The answer of the sign-in by a link, the same for every address (the link itself goes by e-mail).
+    confirmation: "A sign-in link is sent to the address given, if an account goes with it."
     check: "A credential link has been sent to your email."
 
 verifyEmail:

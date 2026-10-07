@@ -50,7 +50,7 @@
 
         <div class="col d-flex justify-content-center login-btn">
             {% if form.vars.allow_login_token %}
-            <a id="btn-link-token" class="btn btn-lg btn-success" href="{{ path('security_loginByToken') }}">{{ '@forms.login.byToken'|trans }}</button>
+            <a id="btn-link-token" class="btn btn-lg btn-success" href="{{ path('security_loginWithToken') }}">{{ '@forms.login.byToken'|trans }}</a>
             {% endif %}
             <button class="btn btn-lg btn-primary" type="submit">{{ '@forms.login.submit'|trans }}</button>
         </div>

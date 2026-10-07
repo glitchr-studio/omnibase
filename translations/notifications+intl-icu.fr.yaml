@@ -67,6 +67,8 @@ access_restricted:
         on_deny: "Le site est en <b>accès limité</b> pour les super-administrateurs. Cette page est la page de redirection automatique."
 
 loginToken:
+    # The answer of the sign-in by a link, the same for every address (the link itself goes by e-mail).
+    confirmation: "Un lien de connexion est envoyé à l'adresse indiquée, si un compte y est attaché."
     check: "Un lien de connexion a été envoyé à ton adresse e-mail."
     check._polite: "Un lien de connexion a été envoyé à votre adresse e-mail."
 

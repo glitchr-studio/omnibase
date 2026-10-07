@@ -255,7 +255,10 @@ class Notifier extends BaseNotifier implements NotifierInterface
      */
     public function loginToken(User $user, Token $token)
     {
-        $notification = new Notification("loginToken.check");
+        // What the browser would be told with it is what the page says to everyone who asks ("a link is
+        // sent if an account goes with the address") - not "a link has been sent to your address", which
+        // only an account was told. SecurityController sends it by e-mail alone.
+        $notification = new Notification("loginToken.confirmation");
         $notification->setUser($user);
 
         $notification->setHtmlTemplate("email.html.twig");
