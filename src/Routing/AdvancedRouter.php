@@ -15,6 +15,7 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Event\KernelEvent;
+use Symfony\Component\Routing\Exception\MethodNotAllowedException;
 use Symfony\Component\Routing\Exception\ResourceNotFoundException;
 use Symfony\Component\Routing\Exception\RouteNotFoundException;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
@@ -736,10 +737,21 @@ class AdvancedRouter implements AdvancedRouterInterface
             $routeUrl = $this->getRequestUri();
         }
 
-        try {
-            return $routeUrl ? $this->match($routeUrl) : null;
-        } catch (ResourceNotFoundException $e) {
+        if (!$routeUrl) {
             return null;
+        }
+
+        // An address is matched as it would be visited: with GET, whatever the request asking (a sign-in's POST
+        // reading back /admin/avatars, a GET-only route, matched nothing and sent the visitor home).
+        $context = $this->getContext();
+        $method = $context->getMethod();
+        $context->setMethod('GET');
+        try {
+            return $this->match($routeUrl);
+        } catch (ResourceNotFoundException|MethodNotAllowedException $e) {
+            return null;
+        } finally {
+            $context->setMethod($method);
         }
     }
 

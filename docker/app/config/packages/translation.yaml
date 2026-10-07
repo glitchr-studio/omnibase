@@ -1,0 +1,10 @@
+# Two languages, as a site has them: English by default, French beside it
+# (a page's language: its address, the visitor's choice, else - on a first
+# visit - the browser's; tests/Http/PageLanguageHttpTest).
+framework:
+    default_locale: en
+    translator:
+        default_path: '%kernel.project_dir%/translations'
+        fallbacks:
+            - en
+            - fr

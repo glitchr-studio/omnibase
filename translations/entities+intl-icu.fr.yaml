@@ -123,8 +123,8 @@ layout:
 
       common:
         abstract_adapter:
-          _singular: attribute
-          _plural: attributes
+          _singular: attribut
+          _plural: attributs
         abstract_rule_adapter:
           _singular: règle
           _plural: règles

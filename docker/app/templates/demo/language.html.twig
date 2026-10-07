@@ -1,0 +1,8 @@
+{% extends 'layout1.html.twig' %}
+
+{% block title %}Language{% endblock %}
+
+{% block content %}
+    <h1>{{ 'Language'|trans }}</h1>
+    <p>This page in the visitor's language, at its address in that language: <a id="here" href="{{ path('demo_language') }}">{{ path('demo_language') }}</a> ({{ app.request.locale }}).</p>
+{% endblock %}

@@ -55,10 +55,10 @@ class AdvancedUrlGenerator extends CompiledUrlGenerator
         $this->compiledRoutes = $compiledRoutes;
     }
 
-    protected function resolveCandidates(string $routeName, array $routeParameters = [], int $referenceType = self::ABSOLUTE_PATH): array
+    protected function resolveCandidates(string $routeName, array $routeParameters = [], int $referenceType = self::ABSOLUTE_PATH, ?string $locale = null): array
     {
         $routeCandidates = [];
-        $locale = $routeParameters["_locale"] ?? self::$router->getLocalizer()->getLocaleLang(); 
+        $locale ??= $routeParameters["_locale"] ?? self::$router->getLocalizer()->getLocaleLang();
     
         if (!str_ends_with($routeName, "." . $locale)) {
             $localizedAppRouteName = $routeName . "." . $locale;
@@ -92,8 +92,16 @@ class AdvancedUrlGenerator extends CompiledUrlGenerator
             $routeCandidates[] = $routeDefaultName;
         }
 
-        $routes = array_filter(array_transforms(fn($k, $routeName): array => [$routeName, self::$router->getRoute($routeName)], $routeGroups));
-        ksort($routes);
+        // The candidates in their order of preference - the visitor's locale
+        // first - then the rest of the group. (Sorted by name, "app_x" came
+        // before "app_x.de": the first URL of a route in a request was the
+        // default locale's, whatever the visitor's language.)
+        $routes = [];
+        foreach (array_unique(array_merge($routeCandidates, $routeGroups)) as $candidate) {
+            if ($candidate && !array_key_exists($candidate, $routes) && ($route = self::$router->getRoute($candidate))) {
+                $routes[$candidate] = $route;
+            }
+        }
 
         return $routes;
     }
@@ -172,7 +180,8 @@ class AdvancedUrlGenerator extends CompiledUrlGenerator
         }
 
         //
-        // Extract locale from route name if found
+        // Extract locale from route name if found ("app_x.en": English, whatever the visitor's)
+        $locale = null;
         foreach (self::$router->getLocalizer()->getAvailableLocaleLangs() as $lang) {
             if (str_ends_with($routeName, "." . $lang)) {
                 $routeName = str_rstrip($routeName, "." . $lang);
@@ -256,7 +265,7 @@ class AdvancedUrlGenerator extends CompiledUrlGenerator
         if (array_key_exists($hash, $this->cachedRoutes) && $this->cachedRoutes[$hash]["_name"] !== null) {
             $cachedRoute = $this->cachedRoutes[$hash];
 
-            $locale = array_key_exists("_locale", $routeParameters) ? self::$router->getLocalizer()->getLocaleLang($routeParameters["_locale"]) : self::$router->getLocalizer()->getLocaleLang();
+            $locale ??= array_key_exists("_locale", $routeParameters) ? self::$router->getLocalizer()->getLocaleLang($routeParameters["_locale"]) : self::$router->getLocalizer()->getLocaleLang();
             try {
                 return parent::generate($cachedRoute["_name"] . ($locale ? "." . $locale : ""), $routeParameters, $referenceType);
             } catch (Exception $_) {
@@ -264,7 +273,7 @@ class AdvancedUrlGenerator extends CompiledUrlGenerator
             }
         }
 
-        $routes = $this->resolveCandidates($routeName, $routeParameters, $referenceType);
+        $routes = $this->resolveCandidates($routeName, $routeParameters, $referenceType, $locale);
         foreach($routes as $routeName => $route) {
 
             try {
@@ -281,8 +290,10 @@ class AdvancedUrlGenerator extends CompiledUrlGenerator
                     $routeRequirements = $routes[$routeName]->getRequirements();
                 }
                 
+                // Cached without its locale: the cached path appends the visitor's.
+                $lang = $locale ?? (array_key_exists("_locale", $routeParameters) ? self::$router->getLocalizer()->getLocaleLang($routeParameters["_locale"]) : self::$router->getLocalizer()->getLocaleLang());
                 $this->cachedRoutes[$hash] = [
-                    "_name" => $routeName,
+                    "_name" => $lang && str_ends_with($routeName, "." . $lang) ? substr($routeName, 0, -strlen("." . $lang)) : $routeName,
                     "_requirements" => $routeRequirements
                 ];
 

@@ -14,8 +14,10 @@ case "${1:-serve}" in
         php bin/console doctrine:schema:create --no-interaction 2>/dev/null || php bin/console doctrine:schema:update --force --complete --no-interaction
         php bin/console assets:install public --no-interaction
         # Warmed again now the bundles' files are there: the commands above
-        # booted the kernel, and the webpack warmer, before they were.
-        rm -rf var/cache/*
+        # booted the kernel, and the webpack warmer, before they were. The
+        # shared pools too (var/share: the router's compiled routes), which
+        # outlive the container in the var volume.
+        rm -rf var/cache/* var/share/*
         php bin/console cache:warmup
         exec php -S 0.0.0.0:8000 -t public ;;
     check)
@@ -42,7 +44,9 @@ case "${1:-serve}" in
         # The demonstration's tests compile theirs without debug
         # (var/cache/<env>_demo_test): nothing refreshes it, and var/ is a
         # volume that outlives the run.
-        rm -rf var/cache/test var/cache/*_demo_test var/test.db
+        # The pools of var/share (the router's compiled routes) last as long:
+        # a route added since was never generated.
+        rm -rf var/cache/test var/cache/*_demo_test var/share/test var/share/demo var/test.db
         php bin/console doctrine:schema:create --env=test --no-interaction --quiet
         exec vendor/bin/phpunit -c "$suite/phpunit.xml.dist" --bootstrap tests/harness.php "$@" ;;
     *) exec "$@" ;;

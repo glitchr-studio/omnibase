@@ -104,6 +104,20 @@ class DemoController extends AbstractController
         return $this->render('demo/fields.html.twig', ['form' => $form->createView()]);
     }
 
+    /** A page with an address in each language, as a site's legal pages have (tests/Http/PageLanguageHttpTest). */
+    #[Route(['en' => '/language', 'fr' => '/langue'], name: 'demo_language')]
+    public function language(): Response
+    {
+        return $this->render('demo/language.html.twig');
+    }
+
+    /** The same, at one address for every language: the visitor's choice, or the language they were last shown, decides. */
+    #[Route('/welcome', name: 'demo_welcome')]
+    public function welcome(): Response
+    {
+        return $this->render('demo/language.html.twig');
+    }
+
     private function seed(): string
     {
         $created = [];

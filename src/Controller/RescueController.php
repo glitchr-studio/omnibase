@@ -56,7 +56,7 @@ class RescueController extends AbstractController
         // Generate form
         $formProcessor = $this->formProxy
             ->createProcessor("form:login:rescue", SecurityLoginType::class, ["identifier" => $lastUsername])
-            ->onDefault(function (FormProcessorInterface $formProcessor) use ($authenticationUtils) {
+            ->onDefault(function (FormProcessorInterface $formProcessor) use ($authenticationUtils, $referrer) {
                 $lastUsername = $authenticationUtils->getLastUsername();
                 $logo = $this->settingBag->get("base.settings.logo.admin")["_self"] ?? null;
                 $logo = $logo ?? $this->settingBag->get("base.settings.logo")["_self"] ?? null;
@@ -74,11 +74,13 @@ class RescueController extends AbstractController
                 return $this->render($template, [
                     'last_username' => $lastUsername,
                     'translation_domain' => 'forms',
-                    'target_path' => $this->adminUrl(),
+                    // Where the visitor was going (/admin/avatars), kept by the entry point - the admin's home only without one.
+                    'target_path' => $this->targetUrl($referrer),
                     'identifier_label' => '@forms.login.identifier',
                     'password_label' => '@forms.login.password',
                     'logo' => $logo,
-                    'error' => null,
+                    // Why the last attempt was refused - wrong identifiers, too many attempts: it was never shown.
+                    'error' => $authenticationUtils->getLastAuthenticationError(),
                     'identifier' => $lastUsername,
                     'form' => $formProcessor->getForm()->createView(),
                 ]);
@@ -92,6 +94,22 @@ class RescueController extends AbstractController
     public function index(): Response
     {
         return $this->redirectToRoute("security_rescue");
+    }
+
+    /** The page asked for before the sign-in, when it is one of this site's; else the admin's home. */
+    private function targetUrl(ReferrerInterface $referrer): string
+    {
+        $url = $referrer->getUrl();
+        if (!$url || !$referrer->sameSite()) {
+            return $this->adminUrl();
+        }
+
+        // As a path (/admin/avatars?page=2): what the sign-in reads back is matched against the routes, which an
+        // absolute address with its host and port does not always find - and the sign-in then fell back to "/".
+        $parts = parse_url($url);
+        $path = ($parts['path'] ?? '/').(isset($parts['query']) ? '?'.$parts['query'] : '');
+
+        return '' !== trim($path, '/') ? $path : $this->adminUrl();
     }
 
     /**

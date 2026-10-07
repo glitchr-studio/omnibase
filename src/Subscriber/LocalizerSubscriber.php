@@ -10,7 +10,9 @@ use Base\Service\LocalizerInterface;
 
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
+use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Http\Event\SwitchUserEvent;
 use Symfony\Component\Security\Http\SecurityEvents;
@@ -19,6 +21,9 @@ class LocalizerSubscriber implements EventSubscriberInterface
 {
     public const __LANG_IDENTIFIER__ = "LANG";
     public const __TIMEZONE_IDENTIFIER__ = "TIMEZONE";
+
+    /** The request attribute holding the language a page was shown in, for the response to remember. */
+    public const DISPLAYED_LOCALE = "_base_displayed_locale";
 
     /**
      * @var LocalizerInterface
@@ -52,8 +57,45 @@ class LocalizerSubscriber implements EventSubscriberInterface
          */
         return [
             KernelEvents::REQUEST => ['onKernelRequest', 8],
+            KernelEvents::RESPONSE => ['onKernelResponse', 0],
             SecurityEvents::SWITCH_USER => 'onSwitchUser'
         ];
+    }
+
+    /** A locale of this site's ("de", "fr_FR", "fr-FR"), normalized; null for any other. */
+    private function available(?string $locale): ?string
+    {
+        if (!is_string($locale) || !preg_match('/^[a-zA-Z]{2}([-_][a-zA-Z]{2})?$/', $locale)) {
+            return null;
+        }
+        if (!in_array(strtolower(substr($locale, 0, 2)), $this->localizer->getAvailableLocaleLangs(), true)) {
+            return null;
+        }
+
+        return $this->localizer::normalizeLocale(strtolower(substr($locale, 0, 2)).substr($locale, 2));
+    }
+
+    /** The language the page was shown in, remembered for the next one (LANG). */
+    public function onKernelResponse(ResponseEvent $event): void
+    {
+        if (!$event->isMainRequest()) {
+            return;
+        }
+
+        $request = $event->getRequest();
+        $locale = $request->attributes->get(self::DISPLAYED_LOCALE);
+        if (!is_string($locale) || $request->cookies->get(self::__LANG_IDENTIFIER__) === $locale) {
+            return;
+        }
+
+        $response = $event->getResponse();
+        foreach ($response->headers->getCookies() as $cookie) {
+            if ($cookie->getName() === self::__LANG_IDENTIFIER__) {
+                return; // set by the page itself (a change of language)
+            }
+        }
+
+        $response->headers->setCookie(Cookie::create(self::__LANG_IDENTIFIER__, $locale, 0, "/", null, $request->isSecure(), false, false, Cookie::SAMESITE_LAX));
     }
 
     public function onSwitchUser(SwitchUserEvent $event): void
@@ -64,45 +106,55 @@ class LocalizerSubscriber implements EventSubscriberInterface
         setcookie(self::__LANG_IDENTIFIER__, $event->getTargetUser()->getLocale(), 0, "/", $this->router->getDomain());
     }
 
+    /**
+     * The language of a page: its address (a route of one language,
+     * "/en/..." or "/datenschutz"), else the visitor's own choice or the
+     * language their last page was shown in (the LANG cookie, which the
+     * response keeps up to date), else a signed-in member's, else - on a
+     * first visit only - the browser's (Accept-Language), else the site's.
+     *
+     * The browser's language used to be read on every page from the
+     * USER/INFO cookie, which the site's script writes after the first one:
+     * a visitor who arrived on a French page, or chose French, was moved to
+     * their browser's language from the second page on.
+     */
     public function onKernelRequest(RequestEvent $event)
     {
         if (!$event->isMainRequest()) {
             return;
         }
 
-        $_locale = $this->router->match($event->getRequest()->getPathInfo())["_locale"] ?? null;
-        $_locale = $_locale ? $this->localizer->getLocale($_locale) : null;
+        $request = $event->getRequest();
+        $_locale = $this->router->match($request->getPathInfo())["_locale"] ?? null;
+        $_locale = $this->available($_locale);
+        if ($_locale !== null) {
+            $this->localizer->markAsChanged();
+        }
+
+        $locale = $_locale ?? $this->available($request->cookies->get(self::__LANG_IDENTIFIER__));
 
         $user = $this->tokenStorage->getToken()?->getUser();
         if ($user instanceof BaseUser) {
-            $_locale = $_locale ?? $user->getLocale();
+            $locale ??= $this->available($user->getLocale());
         }
 
-        if ($_locale !== null) {
-            // headers_sent() guard: under PHPUnit/WebTestCase output has already
-            // started, and this raw setcookie() turns into a warning that debug
-            // mode escalates to a 500 on every authenticated request
-            if (is_instanceof(User::class, BaseUser::class) && !headers_sent()) {
-                setcookie(self::__LANG_IDENTIFIER__, $_locale, 0, "/", $this->router->getDomain());
-            }
-
-            $this->localizer->markAsChanged();
-            $locale = $_locale;
+        if ($locale === null && $request->headers->has("Accept-Language")) {
+            $langs = $this->localizer->getAvailableLocaleLangs();
+            $preferred = $request->getPreferredLanguage($langs);
+            $locale = $this->available($preferred);
         }
 
-        $locale ??= $event->getRequest()->cookies->get(self::__LANG_IDENTIFIER__);
-        if (is_instanceof(User::class, BaseUser::class)) {
-            $locale ??= User::getCookie("locale");
-        }
-
-        $locale ??= $this->localizer->getLocale();
+        // The site's own language - not the translator's current one, which in a
+        // long-lived worker is still the previous request's.
+        $locale ??= $this->localizer::getDefaultLocale() ?? $this->localizer->getLocale();
 
         // Normalize locale
         $locale = $this->localizer::normalizeLocale($locale);
 
         // Set new locale
-        $this->localizer->setLocale($locale, $event->getRequest());
+        $this->localizer->setLocale($locale, $request);
         $this->localizer->markAsLate();
+        $request->attributes->set(self::DISPLAYED_LOCALE, $locale);
 
         //
         // Set timezone
