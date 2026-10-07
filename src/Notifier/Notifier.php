@@ -289,12 +289,13 @@ class Notifier extends BaseNotifier implements NotifierInterface
      */
     public function userWelcomeBack(User $user, Token $token)
     {
-        $notification = new Notification("accountWelcomeBack.success");
+        // Both texts name the account ("Bon retour, {0} !", "Bienvenue {0} !"): given their parameter.
+        $notification = new Notification("accountWelcomeBack.success", [$user]);
         $notification->setUser($user);
 
         $notification->setHtmlTemplate("email.html.twig");
         $notification->setHtmlParameters([
-            "subject" => $this->translator->trans("@emails.accountWelcomeBack.subject"),
+            "subject" => $this->translator->trans("@emails.accountWelcomeBack.subject", [$user]),
             "content" => $this->translator->trans("@emails.accountWelcomeBack.content"),
             "action_text" => $this->translator->trans("@emails.accountWelcomeBack.action_text"),
             "action_url" => $this->router->getUrl("security_accountWelcomeBackWithToken", ["token" => $token->get()])

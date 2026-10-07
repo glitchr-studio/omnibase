@@ -9,6 +9,20 @@ use PHPUnit\Framework\TestCase;
  */
 class FunctionsTest extends TestCase
 {
+    /** A thread published without an excerpt nor a text: its e-mail shortens nothing, without a PHP deprecation. */
+    public function testStrShortenTakesATextThatIsNotThere(): void
+    {
+        set_error_handler(static function (int $level, string $message): never {
+            throw new \ErrorException($message, 0, $level);
+        });
+        try {
+            $this->assertSame('', str_shorten(null));
+            $this->assertSame('Bonjour', str_shorten('<b>Bonjour</b>'));
+        } finally {
+            restore_error_handler();
+        }
+    }
+
     public function testSign(): void
     {
         $this->assertSame('+', sign(0));

@@ -1312,7 +1312,8 @@ namespace {
     const SHORTEN_BACK_EXTEND = 3; // Lorem ipsum dolor [..]
     function str_shorten(?string $haystack, int $length = 100, int $position = SHORTEN_BACK, string $separator = " [..] "): ?string
     {
-        $haystack = trim(strip_tags($haystack));
+        // A text that is not there (a thread published without an excerpt) is an empty one: strip_tags() takes no null.
+        $haystack = trim(strip_tags($haystack ?? ''));
         if (!$haystack) {
             return $haystack;
         }
