@@ -13,6 +13,9 @@ case "${1:-serve}" in
         rm -rf var/cache/*
         php bin/console doctrine:schema:create --no-interaction 2>/dev/null || php bin/console doctrine:schema:update --force --complete --no-interaction
         php bin/console assets:install public --no-interaction
+        # Warmed again now the bundles' files are there: the commands above
+        # booted the kernel, and the webpack warmer, before they were.
+        rm -rf var/cache/*
         php bin/console cache:warmup
         exec php -S 0.0.0.0:8000 -t public ;;
     check)
@@ -32,6 +35,10 @@ case "${1:-serve}" in
         # every entity the bundles map.
         export APP_ENV=test
         export HARNESS_SUITE_BOOTSTRAP="$suite/tests/bootstrap.php"
+        # The bundles' public files, linked, before the cache is made: a page
+        # asked of the kernel links its scripts and stylesheets only when the
+        # webpack warmer found them (bundles/base/entrypoints.json).
+        php bin/console assets:install public --symlink --env=test --no-interaction --quiet
         # The demonstration's tests compile theirs without debug
         # (var/cache/<env>_demo_test): nothing refreshes it, and var/ is a
         # volume that outlives the run.

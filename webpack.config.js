@@ -34,6 +34,10 @@ Encore.addPlugin(new WebpackBar())
     .copyFiles({from: './assets/styles/credits', to: 'css/[name].[ext]'})
     // Plain scripts a page links as they are (media.js: one thing sounds at a time, docs/40-commons/front-end.md).
     .copyFiles({from: './assets/media', to: 'js/[name].[ext]'})
+    // highlight.js's theme for the editor's code blocks, served by the bundle (BSD-3-Clause, its licence
+    // beside it) and linked by form-type-editor.js where an editor or code is shown - see the loader below.
+    .copyFiles({from: './node_modules/highlight.js/styles/', pattern: /(^|\/)default\.css$/, includeSubdirectories: false, to: 'css/highlight.js/[name].[ext]'})
+    .copyFiles({from: './node_modules/highlight.js/', pattern: /(^|\/)LICENSE$/, includeSubdirectories: false, to: 'css/highlight.js/LICENSE.txt'})
     .copyFiles({from: './assets/styles/images/bundles/', to: 'images/bundles/[path][name].[ext]'})
     .copyFiles({from: './assets/styles/images/', to: 'images/[path][name].[ext]', pattern: /\.(svg|webp|jpg|png|gif)$/})
 
@@ -68,6 +72,13 @@ Encore.addPlugin(new WebpackBar())
     .addEntry('form-defer.cropper', './assets/form-defer.cropper.js')
     .addEntry('form-defer.emoji', './assets/form-defer.emoji.js')
     .addEntry('form-defer.dropzone', './assets/form-defer.dropzone.js')
+
+    // editorjs-code-highlight's bundle @imports highlight.js's theme from cdnjs: dropped (assets/loaders/no-remote-import.js).
+    .addRule({
+        test: /[\\/]node_modules[\\/]editorjs-code-highlight[\\/].*\.js$/,
+        enforce: 'pre',
+        use: [{loader: path.resolve(__dirname, 'assets/loaders/no-remote-import.js')}]
+    })
 
     .enablePostCssLoader()
     .enableSassLoader((options) => {

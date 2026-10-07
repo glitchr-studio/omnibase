@@ -13,7 +13,7 @@
   "./form-defer.emoji.js": "/bundles/base/form-defer.emoji.8dbeea9e.js",
   "./form-defer.array.js": "/bundles/base/form-defer.array.41d9bc2e.js",
   "./form-defer.editor.css": "/bundles/base/form-defer.editor.f43c0d96.css",
-  "./form-defer.editor.js": "/bundles/base/form-defer.editor.d061a228.js",
+  "./form-defer.editor.js": "/bundles/base/form-defer.editor.1787c9a3.js",
   "./form-defer.cropper.css": "/bundles/base/form-defer.cropper.31d6cfe0.css",
   "./form-defer.cropper.js": "/bundles/base/form-defer.cropper.91b50d1c.js",
   "./form-defer.color.css": "/bundles/base/form-defer.color.c9742277.css",
@@ -27,7 +27,7 @@
   "./form-defer.select2.js": "/bundles/base/form-defer.select2.c24175ae.js",
   "./base-defer.css": "/bundles/base/base-defer.5f32239b.css",
   "./base-defer.js": "/bundles/base/base-defer.3e26b37a.js",
-  "./951.4cdd58b8.js": "/bundles/base/951.4cdd58b8.js",
+  "./951.7227a03f.js": "/bundles/base/951.7227a03f.js",
   "./base-async-mobile.css": "/bundles/base/base-async-mobile.c150b274e88f97b747ce.css",
   "./metadata/icons.yml": "/bundles/base/metadata/icons.yml",
   "./fonts/fa-solid-900.ttf": "/bundles/base/fonts/fa-solid-900.2582b0e4bcf85eceead0de3fd9035c90.ttf",
@@ -337,5 +337,7 @@
   "./images/flags/MC.svg": "/bundles/base/images/flags/MC.svg",
   "./images/flags/PL.svg": "/bundles/base/images/flags/PL.svg",
   "./images/flags/ID.svg": "/bundles/base/images/flags/ID.svg",
-  "./images/flags/UNKNOWN.svg": "/bundles/base/images/flags/UNKNOWN.svg"
+  "./images/flags/UNKNOWN.svg": "/bundles/base/images/flags/UNKNOWN.svg",
+  "./css/highlight.js/default.css": "/bundles/base/css/highlight.js/default.css",
+  "./css/highlight.js/LICENSE": "/bundles/base/css/highlight.js/LICENSE.txt"
 }

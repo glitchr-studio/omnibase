@@ -208,6 +208,26 @@ $(window).on("DOMContentLoaded.edjs", function() {
     });
 });
 
+// highlight.js's theme for the code blocks: the bundle's own copy (css/highlight.js/, BSD-3-Clause,
+// its licence beside it), linked once, and only on a page that shows an editor or a block of code -
+// editorjs-code-highlight's own @import of it from cdnjs is dropped at build
+// (assets/loaders/no-remote-import.js).
+function codeStylesheet()
+{
+    if (document.querySelector("link[data-code-stylesheet]")) return;
+
+    var link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = __webpack_public_path__ + "css/highlight.js/default.css";
+    link.setAttribute("data-code-stylesheet", "");
+    document.head.appendChild(link);
+}
+
+function showsCode(data)
+{
+    return !!data && Array.isArray(data.blocks) && data.blocks.some(function (block) { return block && block.type === "code"; });
+}
+
 function edjs(inputEl, holderId, value = {}, options = {})
 {
     var holder = $("#"+holderId)[0] || undefined;
@@ -225,6 +245,7 @@ function edjs(inputEl, holderId, value = {}, options = {})
     
     var data = json_decode(value);
     if (data) Object.assign(options, {data:data});
+    if (inputEl != undefined || showsCode(data)) codeStylesheet();
     
     var onSave = (savedData) => { if(inputEl != undefined) $(inputEl).val(JSON.stringify(savedData)); }
 

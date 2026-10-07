@@ -146,3 +146,23 @@ value: `poll:change` (detail: the answer), the class `is-ringing`, and with
 `chime` three notes every two seconds until `poll#silence`. `arm()` is the
 touch browsers ask before a page may make sound; it also keeps the screen on
 (`awake`). A hidden page is not polled.
+
+# Nothing from elsewhere
+
+A page of a site loads its scripts, stylesheets and fonts from the site
+itself: no CDN sees the visitor (`tests/Http/NothingFromElsewhereHttpTest`
+reads the contact page of the harness - which links `base` and `form` as a
+site's layout does - and what its files pull in).
+
+The editor's code blocks (editorjs-code-highlight) are coloured by
+highlight.js's default theme. The package's own bundle `@import`s it from
+cdnjs.cloudflare.com, and injects it with its styles on every page the
+editor's script is on - every page with a form. That `@import` is dropped
+at build (`assets/loaders/no-remote-import.js`); the theme is the bundle's
+copy, `bundles/base/css/highlight.js/default.css` (highlight.js 11.6.0,
+BSD 3-Clause, its licence beside it as `LICENSE.txt`), linked by the
+editor's script once, and only on a page that shows an editor or a block of
+code.
+
+Still reaching elsewhere, and only where the field is: the emoji picker
+(`EmojiPickerType`, entry `form.emoji`) fetches its data from jsDelivr.
