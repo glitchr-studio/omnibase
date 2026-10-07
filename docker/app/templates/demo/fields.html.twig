@@ -1,0 +1,11 @@
+{% extends 'layout1.html.twig' %}
+
+{% block title %}Fields{% endblock %}
+
+{% block content %}
+    <h1>Fields</h1>
+    <p>The bundle's fields whose script loads something: what they fetch comes from the site.</p>
+    {{ form_start(form) }}
+        {{ form_row(form.mood) }}
+    {{ form_end(form) }}
+{% endblock %}

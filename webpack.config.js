@@ -38,6 +38,10 @@ Encore.addPlugin(new WebpackBar())
     // beside it) and linked by form-type-editor.js where an editor or code is shown - see the loader below.
     .copyFiles({from: './node_modules/highlight.js/styles/', pattern: /(^|\/)default\.css$/, includeSubdirectories: false, to: 'css/highlight.js/[name].[ext]'})
     .copyFiles({from: './node_modules/highlight.js/', pattern: /(^|\/)LICENSE$/, includeSubdirectories: false, to: 'css/highlight.js/LICENSE.txt'})
+    // The emoji picker's data and labels, served by the bundle (emojibase-data, MIT, its licence beside
+    // it) and given to picmo by form-type-emoji.js - see the picmo loader below.
+    .copyFiles({from: './node_modules/emojibase-data/', pattern: /(^|\/)(en|fr|de|ja)\/(data|messages)\.json$/, to: 'emoji/[path][name].[ext]'})
+    .copyFiles({from: './node_modules/emojibase-data/', pattern: /(^|\/)LICENSE$/, includeSubdirectories: false, to: 'emoji/LICENSE.txt'})
     .copyFiles({from: './assets/styles/images/bundles/', to: 'images/bundles/[path][name].[ext]'})
     .copyFiles({from: './assets/styles/images/', to: 'images/[path][name].[ext]', pattern: /\.(svg|webp|jpg|png|gif)$/})
 
@@ -86,6 +90,13 @@ Encore.addPlugin(new WebpackBar())
         test: /[\\/]node_modules[\\/]editorjs-code-highlight[\\/].*\.js$/,
         enforce: 'pre',
         use: [{loader: path.resolve(__dirname, 'assets/loaders/no-remote-import.js')}]
+    })
+
+    // picmo fetches its emoji data from jsDelivr: pointed at the bundle's copy (assets/loaders/local-emoji-data.js).
+    .addRule({
+        test: /[\\/]node_modules[\\/]picmo[\\/].*\.js$/,
+        enforce: 'pre',
+        use: [{loader: path.resolve(__dirname, 'assets/loaders/local-emoji-data.js'), options: {base: '/bundles/base/emoji/'}}]
     })
 
     .enablePostCssLoader()

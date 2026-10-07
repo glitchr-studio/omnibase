@@ -58,6 +58,7 @@
     "editorjs-paragraph": "^1.0",
     "editorjs-undo": "^2.0",
     "editorjs-yjs": "^0.2.1",
+    "emojibase-data": "17.0.0",
     "flatpickr": "^4.6",
     "highlight.js": "11.6.0",
     "picmo": "5.7.2",

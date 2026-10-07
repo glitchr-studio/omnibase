@@ -94,7 +94,7 @@ The bundle is developed inside a host app's `vendor/glitchr/omnibase`
 checkout (composer VCS install keeps `.git`) and pushed from there.
 
 ```bash
-make build     # yarn install + Encore (watch in debug, prod otherwise)
+make build     # yarn install --frozen-lockfile (yarn.lock) + Encore, production build
 make linter    # php-cs-fixer + phpstan (level max)
 make tests     # phpunit
 ```

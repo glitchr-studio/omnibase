@@ -17,7 +17,9 @@ use Symfony\Component\HttpFoundation\Response;
  * @import is dropped at build (assets/loaders/no-remote-import.js), the
  * theme is the bundle's own copy (bundles/base/css/highlight.js/, BSD
  * 3-Clause, its licence beside it), linked by the editor's script only where
- * an editor or a block of code is shown.
+ * an editor or a block of code is shown. The emoji picker (picmo) fetched
+ * its emojis from jsDelivr: they are the bundle's copy too (bundles/base/
+ * emoji/, emojibase-data, MIT), on the harness's /fields.
  */
 class NothingFromElsewhereHttpTest extends KernelTestCase
 {
@@ -95,42 +97,89 @@ class NothingFromElsewhereHttpTest extends KernelTestCase
         return $response instanceof BinaryFileResponse ? (string) file_get_contents($response->getFile()->getPathname()) : (string) $response->getContent();
     }
 
-    public function testTheContactPageLoadsNothingFromElsewhere(): void
+    /**
+     * The page, and what its own scripts and stylesheets pull in, reach no other origin.
+     *
+     * @return array{string, array<string, string>} the page's HTML, and the site's files it links by address
+     */
+    private function assertNothingFromElsewhere(string $path): array
     {
-        $response = $this->page('/contact');
-        self::assertSame(200, $response->getStatusCode());
+        $response = $this->page($path);
+        self::assertSame(200, $response->getStatusCode(), $path);
         $html = (string) $response->getContent();
 
         $resources = self::resources($html);
-        self::assertNotEmpty($resources, 'the page links its scripts and stylesheets');
-        self::assertSame([], array_values(array_filter($resources, self::isElsewhere(...))), 'every resource of the page is the site\'s');
+        self::assertNotEmpty($resources, $path.' links its scripts and stylesheets');
+        self::assertSame([], array_values(array_filter($resources, self::isElsewhere(...))), 'every resource of '.$path.' is the site\'s');
         foreach (self::CDNS as $cdn) {
             self::assertStringNotContainsString($cdn, $html);
         }
 
-        // What the site's own scripts and stylesheets pull in.
-        $read = 0;
-        $editor = null;
+        $files = [];
         foreach (array_filter($resources, static fn ($url) => (bool) preg_match('/\.(js|css)(\?|$)/', (string) parse_url($url, \PHP_URL_PATH))) as $url) {
             $content = $this->local($url);
             if (null === $content) {
                 continue;
             }
-            ++$read;
+            $files[$url] = $content;
             self::assertSame(0, preg_match('/@import\s+url\(\s*[\'"]?(https?:)?\/\/[^)]*\)/i', $content, $import), $url.' imports a stylesheet from elsewhere: '.($import[0] ?? ''));
             foreach (self::CDNS as $cdn) {
                 self::assertFalse(str_contains($content, $cdn), $url.' names '.$cdn);
             }
-            if (str_contains($url, 'form-defer.editor.') && str_ends_with((string) parse_url($url, \PHP_URL_PATH), '.js')) {
-                $editor = $content;
+        }
+        self::assertNotEmpty($files, 'the site\'s own files were read');
+
+        return [$html, $files];
+    }
+
+    /** @param array<string, string> $files */
+    private static function script(array $files, string $entry): ?string
+    {
+        foreach ($files as $url => $content) {
+            $file = basename((string) parse_url($url, \PHP_URL_PATH));
+            if (preg_match('/^'.preg_quote($entry, '/').'\.[0-9a-f]{8}\.js$/', $file)) {
+                return $content;
             }
         }
-        self::assertGreaterThan(0, $read, 'the site\'s own files were read');
+
+        return null;
+    }
+
+    public function testTheContactPageLoadsNothingFromElsewhere(): void
+    {
+        [$html, $files] = $this->assertNothingFromElsewhere('/contact');
 
         // The code blocks' theme: not on the page, linked by the editor's script where it is needed.
         self::assertStringNotContainsString('css/highlight.js/', $html);
+        $editor = self::script($files, 'form-defer.editor');
         self::assertNotNull($editor, 'the editor\'s script is on the page, as on every page with a form');
         self::assertTrue(str_contains($editor, 'css/highlight.js/default.css'), 'the editor\'s script links the theme itself, where it is needed');
+    }
+
+    /**
+     * The emoji picker's data: picmo fetched it from jsDelivr (emojibase-data);
+     * it is the bundle's own copy, given to the picker by the field's script.
+     */
+    public function testAPageWithAnEmojiFieldLoadsNothingFromElsewhere(): void
+    {
+        [$html, $files] = $this->assertNothingFromElsewhere('/fields');
+
+        self::assertStringContainsString('data-emoji-field', $html, 'the page has an emoji field');
+        $picker = self::script($files, 'form-defer.emoji');
+        self::assertNotNull($picker, 'the field\'s script is on the page');
+        self::assertTrue(str_contains($picker, 'emoji/'), 'the picker is given the bundle\'s data');
+        self::assertFalse(str_contains($picker, 'emojibase-data@'), 'nothing of picmo\'s own fetching from the registry\'s CDN is left');
+
+        foreach (['en', 'fr', 'de', 'ja'] as $locale) {
+            $emojis = json_decode((string) file_get_contents(self::PUBLIC_DIR.'/emoji/'.$locale.'/data.json'), true);
+            self::assertIsArray($emojis, $locale);
+            self::assertGreaterThan(1000, \count($emojis), $locale);
+            self::assertArrayHasKey('label', $emojis[0]);
+            self::assertArrayHasKey('hexcode', $emojis[0]);
+            $messages = json_decode((string) file_get_contents(self::PUBLIC_DIR.'/emoji/'.$locale.'/messages.json'), true);
+            self::assertNotEmpty($messages['groups'] ?? null, $locale);
+        }
+        self::assertStringContainsString('MIT License', (string) file_get_contents(self::PUBLIC_DIR.'/emoji/LICENSE.txt'));
     }
 
     public function testTheCodeBlocksThemeIsShippedUnderItsLicence(): void

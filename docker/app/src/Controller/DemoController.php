@@ -3,12 +3,14 @@
 namespace App\Controller;
 
 use App\Entity\User;
+use Base\Field\Type\EmojiPickerType;
 use Base\Marketplace\Entity\Order\Method\PaymentMethod;
 use Base\Marketplace\Entity\Product;
 use Base\Marketplace\Entity\Store;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Routing\Attribute\Route;
@@ -85,6 +87,21 @@ class DemoController extends AbstractController
         }
 
         return $this->redirectToRoute('demo_index');
+    }
+
+    /**
+     * The bundle's form fields whose script loads something - the emoji
+     * picker's data -, on a page of the layout: what they fetch, they fetch
+     * from the site (tests/Http/NothingFromElsewhereHttpTest).
+     */
+    #[Route('/fields', name: 'demo_fields')]
+    public function fields(FormFactoryInterface $forms): Response
+    {
+        $form = $forms->createNamedBuilder('fields')
+            ->add('mood', EmojiPickerType::class, ['required' => false])
+            ->getForm();
+
+        return $this->render('demo/fields.html.twig', ['form' => $form->createView()]);
     }
 
     private function seed(): string

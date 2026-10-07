@@ -164,5 +164,20 @@ BSD 3-Clause, its licence beside it as `LICENSE.txt`), linked by the
 editor's script once, and only on a page that shows an editor or a block of
 code.
 
-Still reaching elsewhere, and only where the field is: the emoji picker
-(`EmojiPickerType`, entry `form.emoji`) fetches its data from jsDelivr.
+The emoji picker (`EmojiPickerType`, entry `form.emoji`, picmo) fetched its
+emojis and their labels from jsDelivr. They are the bundle's copy:
+`bundles/base/emoji/<locale>/data.json` and `messages.json` (emojibase-data
+17.0.0, MIT, its licence beside them as `LICENSE.txt`), in English, French,
+German and Japanese - the page's `<html lang>` picks, English otherwise.
+`form-type-emoji.js` fetches them on the first click on a field and gives
+them to the picker, which then fetches nothing; what remains of picmo's own
+fetching is pointed at the same copy at build
+(`assets/loaders/local-emoji-data.js`). The harness's `/fields` carries one.
+
+# The JavaScript dependencies
+
+`yarn.lock` names every package the bundles are built from, and `make assets`
+installs those alone (`yarn install --frozen-lockfile`): from a clean copy it
+rebuilds `bundles/base` byte-identical to what is committed. To take newer
+packages: `ALLOW_ASSETS_UPDATE=1 make assets`, then commit the lock with the
+bundles it built. Node 24 or later (select2's engines).
