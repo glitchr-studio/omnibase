@@ -130,11 +130,26 @@ class FormTypeGuardExtension extends AbstractTypeExtension
             // Checked by the guard itself (below), not by the field's constraint: in the guard's order,
             // and whatever the form's validation groups - a constraint of the Default group is not
             // asked by a form validated in "new" alone (the sign-up).
+            $action = $guard['action'] ?? $this->action($builder->getName());
             $builder->add(FormGuard::CHALLENGE_FIELD, \Omniguard\Bridge\Symfony\Form\ChallengeType::class, [
                 'gateway' => $gateway,
-                'action' => $guard['action'] ?? $this->action($builder->getName()),
+                'action' => $action,
                 'constraints' => [],
             ]);
+
+            // A captcha that reaches a third party (Turnstile, reCAPTCHA, a script from a CDN) waits for
+            // the visitor's consent (omnibase/consent's feature CAPTCHA); beside it, the fallback that
+            // reaches nobody (base.guard.fallback, ALTCHA), shown until then - so that a refusal does not
+            // open the form. Without a fallback, a widget that sets cookies waits all the same; one
+            // that does not is loaded at once.
+            $widget = $this->guard->getRegistry()?->challenge($gateway)->widget($action);
+            $fallback = $this->guard->fallbackGateway();
+            if ($widget?->reachesOthers() && (null !== $fallback && $fallback !== $gateway || $widget->cookies)) {
+                if (null !== $fallback && $fallback !== $gateway) {
+                    $builder->add(FormGuard::FALLBACK_FIELD, \Omniguard\Bridge\Symfony\Form\ChallengeType::class, ['gateway' => $fallback, 'action' => $action, 'constraints' => []]);
+                }
+                $builder->setAttribute('guard_consent', true);
+            }
         }
 
         // Before the validation: a robot caught here does not reach the captcha's provider.
@@ -144,6 +159,10 @@ class FormTypeGuardExtension extends AbstractTypeExtension
             $found = $this->guard->inspect($form, $request, $guard['min_delay'], (string) $guard['email'], (string) $guard['name'], (bool) $guard['reputation']);
             if (null === $found && $form->has(FormGuard::CHALLENGE_FIELD)) {
                 $field = $form->get(FormGuard::CHALLENGE_FIELD);
+                // The visitor who refused the third party solved the fallback: that one is asked.
+                if ('' === trim((string) $field->getData()) && $form->has(FormGuard::FALLBACK_FIELD) && '' !== trim((string) $form->get(FormGuard::FALLBACK_FIELD)->getData())) {
+                    $field = $form->get(FormGuard::FALLBACK_FIELD);
+                }
                 $options = $field->getConfig()->getOptions();
                 if (null !== $answer = $this->guard->challenge($options['gateway'], $field->getData(), $request, $options['action'])) {
                     $field->addError(new FormError($this->translator?->trans(FormGuard::CHALLENGE_MESSAGES[$answer], [], 'validators') ?? FormGuard::CHALLENGE_MESSAGES[$answer], FormGuard::CHALLENGE_MESSAGES[$answer], [], null, $answer));
@@ -158,6 +177,43 @@ class FormTypeGuardExtension extends AbstractTypeExtension
             $target = null !== $field && $form->has($field) ? $form->get($field) : $form;
             $target->addError(new FormError($this->message($reason), null, [], null, $reason));
         }, 10);
+    }
+
+    /**
+     * The captcha that waits for consent: its widget kept inert in a <template> until omnibase/consent
+     * says yes to the feature CAPTCHA (Consent.use()), the fallback shown meanwhile and after a refusal.
+     * Without omnibase/consent's script on the page, the fallback alone.
+     */
+    public function finishView(\Symfony\Component\Form\FormView $view, \Symfony\Component\Form\FormInterface $form, array $options): void
+    {
+        if (!$form->isRoot() || !$form->getConfig()->getAttribute('guard_consent') || !isset($view[FormGuard::CHALLENGE_FIELD])) {
+            return;
+        }
+        $captcha = $view[FormGuard::CHALLENGE_FIELD];
+        $id = $captcha->vars['id'];
+        $origins = implode(', ', $captcha->vars['omniguard_widget']->origins ?? []);
+        $label = $this->translator?->trans('@forms.guard.consent', ['origins' => $origins]) ?? 'Captcha';
+        $fallback = isset($view[FormGuard::FALLBACK_FIELD]) ? $view[FormGuard::FALLBACK_FIELD]->vars['id'] : null;
+        if ($fallback) {
+            $view[FormGuard::FALLBACK_FIELD]->vars['omniguard_html'] = '<div data-guard-fallback="'.$id.'">'.$view[FormGuard::FALLBACK_FIELD]->vars['omniguard_html'].'</div>';
+        }
+
+        $script = <<<'JS'
+            (function (template) {
+                var fallback = document.querySelector('[data-guard-fallback="' + template.dataset.guardConsent + '"]');
+                function on() {
+                    if (template.dataset.guardLoaded) { return; }
+                    template.dataset.guardLoaded = '1';
+                    template.parentNode.insertBefore(document.importNode(template.content, true), template);
+                    if (fallback) { fallback.hidden = true; fallback.querySelectorAll('input').forEach(function (input) { input.disabled = true; }); }
+                }
+                function off() { if (fallback && !template.dataset.guardLoaded) { fallback.hidden = false; } }
+                function start() { if (window.Consent && window.Consent.use) { window.Consent.use('CAPTCHA', {label: template.dataset.guardLabel}, on, off); } }
+                // omnibase/consent's script is deferred: it is there by DOMContentLoaded.
+                if (window.Consent) { start(); } else { document.addEventListener('DOMContentLoaded', start); }
+            })(document.currentScript.previousElementSibling);
+            JS;
+        $captcha->vars['omniguard_html'] = '<template data-guard-consent="'.htmlspecialchars($id, \ENT_QUOTES).'" data-guard-label="'.htmlspecialchars($label, \ENT_QUOTES).'">'.$captcha->vars['omniguard_html'].'</template><script>'.$script.'</script>';
     }
 
     /** An action a captcha accepts: letters, digits, underscores. */

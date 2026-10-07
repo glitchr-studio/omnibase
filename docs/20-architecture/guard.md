@@ -85,6 +85,53 @@ to every form: the option `guard` then adds no second one - the trap, the time, 
 classifier stay. The places that ask ux-google's reCAPTCHA themselves (`CommentType`'s
 `recaptcha`, omnibase/faq's `AskType`, the sign-in's badge) are left as they are.
 
+## Guarded by default
+
+| Form | `guard` | |
+|---|---|---|
+| `ContactType` | `action: contact` | `guard: false` for a form a site guards otherwise |
+| `SecurityRegistrationType` (sign-up) | `action: signup` | a disposable e-mail refused on its field |
+| `SecurityResetPasswordType`, `SecurityLoginTokenType` | `reputation: false` | the same answer for every address |
+| `CommentType` | the lists and the captcha | its own trap (`url`) and time (`opened`) stay, read by `CommentGuard`; no captcha when it asks ux-google's (`recaptcha`) |
+
+The captcha is checked by the guard itself, in its order and whatever the form's validation
+groups (the sign-up validates in `new` alone, where a field's constraint is not asked).
+
+## The sign-in
+
+Symfony's `login_throttling` is the first line (five tries a minute). From
+`base.guard.sign_in_after` failed sign-ins from an address (3, counted for 15 minutes in
+`cache.app`, forgotten after a success), the sign-in form carries the captcha and a sign-in
+without a valid token is refused before its password is checked (`Base\Security\SignInGuard`).
+Not the rescue door, not the demonstration's one click; nothing where ux-google's reCAPTCHA is on.
+
+## Consent
+
+A captcha whose widget reaches a third party (`Widget::reachesOthers()`: Turnstile, reCAPTCHA,
+ALTCHA's script from a CDN) waits for the visitor's consent - omnibase/consent's feature
+`CAPTCHA`, declared by `Consent.use()` - kept inert in a `<template>` until then. Beside it, the
+fallback that reaches nobody (`base.guard.fallback`, ALTCHA) is shown, and stays after a refusal:
+a refusal does not open the form. The guard asks the third party's token when there is one, the
+fallback's otherwise. Without a fallback, a widget that sets cookies (reCAPTCHA) waits all the
+same; one that sets none is loaded at once - serve ALTCHA's script from the site and it reaches
+nobody. A page without omnibase/consent's script shows the fallback alone.
+
+## In a site's tests
+
+The test client submits a form the moment it reads it, and a suite signs in wrong on purpose:
+
+```yaml
+when@test:
+    base:
+        guard:
+            min_delay: 0          # the stamp is still checked: post the one the page prints
+            sign_in_after: 0
+```
+
+With `factory: fixed` as the test captcha, the page prints a hidden `omniguard-token` field
+holding `omniguard-fixed-token`, outside the form: a test client that submits the page's form
+sends it; a request built by hand adds it.
+
 ## The comment forms
 
 `Base\Service\CommentGuard` is the comment forms' face of `FormGuard`: `CommentType`'s `url`

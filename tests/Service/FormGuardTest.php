@@ -75,6 +75,7 @@ class FormGuardTest extends TestCase
             new AltchaGatewayFactory($this->replays),
             new DisposableGatewayFactory(),
             new DownFactory(),
+            new ThirdPartyFactory(),
         ], $gateways);
     }
 
@@ -252,6 +253,27 @@ class FormGuardTest extends TestCase
         $this->assertTrue($form->has(FormGuard::TRAP_FIELD) && $form->has(FormGuard::STAMP_FIELD), 'the trap and the time stay');
     }
 
+    public function testACaptchaThatReachesAThirdPartyWaitsForConsentBesideItsFallback(): void
+    {
+        $this->registry(['third' => ['factory' => 'third'], 'local' => ['factory' => 'fixed']]);
+        $forms = $this->forms(['challenge' => 'third', 'fallback' => 'local'], 'third');
+
+        // Printed inert, in a <template> omnibase/consent opens (feature CAPTCHA); the fallback beside it.
+        $view = $this->form($forms)->createView();
+        $this->assertStringStartsWith('<template data-guard-consent=', $view[FormGuard::CHALLENGE_FIELD]->vars['omniguard_html']);
+        $this->assertStringContainsString("Consent.use('CAPTCHA'", $view[FormGuard::CHALLENGE_FIELD]->vars['omniguard_html']);
+        $this->assertStringContainsString('data-guard-fallback=', $view[FormGuard::FALLBACK_FIELD]->vars['omniguard_html']);
+
+        // The visitor who refused solved the fallback: it holds. Nothing solved: refused.
+        $this->assertTrue($this->send($this->form($forms), post: $this->token())->isValid(), 'the fallback\'s token');
+        $this->assertTrue($this->send($this->form($forms), post: ['third-token' => 'from-the-third-party'])->isValid(), 'the third party\'s, once agreed');
+        $this->assertSame([FormGuard::CHALLENGE_FIELD => [FormGuard::CHALLENGE_MISSING]], $this->errors($this->send($this->form($forms))));
+
+        // A captcha that reaches nobody is printed as it is.
+        $plain = $this->form($this->forms(['challenge' => 'local'], 'local'))->createView();
+        $this->assertStringNotContainsString('<template', $plain[FormGuard::CHALLENGE_FIELD]->vars['omniguard_html']);
+    }
+
     public function testWithoutOmniguardTheTrapAndTheTimeAlone(): void
     {
         $forms = $this->forms(['reputation' => ['emails']], null, omniguard: false);
@@ -296,6 +318,45 @@ final class UxGoogleOption extends \Symfony\Component\Form\AbstractTypeExtension
     public function configureOptions(\Symfony\Component\OptionsResolver\OptionsResolver $resolver): void
     {
         $resolver->setDefaults(['captcha_protection' => false]);
+    }
+}
+
+/** A captcha of a third party: its widget reaches https://challenges.example; any token posted passes. */
+final class ThirdPartyFactory implements GatewayFactoryInterface
+{
+    public function getName(): string
+    {
+        return 'third';
+    }
+
+    public function create(array $options = []): GatewayInterface
+    {
+        return new class implements \Omniguard\ChallengeInterface {
+            public function getName(): string
+            {
+                return 'third';
+            }
+
+            public function getTitle(): string
+            {
+                return 'Third party';
+            }
+
+            public function capabilities(): Capabilities
+            {
+                return new Capabilities(challenge: true, thirdParty: true);
+            }
+
+            public function widget(?string $action = null): \Omniguard\Model\Widget
+            {
+                return new \Omniguard\Model\Widget('third-token', tag: 'div', attributes: ['class' => 'third'], action: $action, thirdParty: true, origins: ['https://challenges.example']);
+            }
+
+            public function verify(\Omniguard\Model\Attempt $attempt): \Omniguard\Model\Verdict
+            {
+                return $attempt->isEmpty() ? \Omniguard\Model\Verdict::fail(\Omniguard\Model\Verdict::MISSING) : new \Omniguard\Model\Verdict(true, 1.0, $attempt->action, null, new \DateTimeImmutable());
+            }
+        };
     }
 }
 

@@ -167,3 +167,5 @@ guard:
     disposable: "Les adresses e-mail jetables ne sont pas acceptées : merci d'en indiquer une autre."
     unreachable: "La vérification de ce formulaire n'a pas pu être faite pour l'instant : merci de réessayer dans un moment."
     spam: "Ce message a été refusé comme indésirable."
+    # The consent panel's switch for a captcha that reaches a third party (its origins).
+    consent: "Vérification anti-robot ({origins})"

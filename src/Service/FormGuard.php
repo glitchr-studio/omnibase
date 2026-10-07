@@ -63,6 +63,8 @@ class FormGuard
     public const TRAP_FIELD = 'guard_website';
     public const STAMP_FIELD = 'guard_opened';
     public const CHALLENGE_FIELD = 'guard_captcha';
+    /** The captcha that reaches nobody, shown while the visitor has not agreed to the one that does. */
+    public const FALLBACK_FIELD = 'guard_captcha_fallback';
 
     /**
      * @param array{challenge?: string|bool|null, fallback?: ?string, reputation?: list<string>, classifier?: ?string, unreachable?: string, min_delay?: int, sign_in_after?: int} $config base.guard

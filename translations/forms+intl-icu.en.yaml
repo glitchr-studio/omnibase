@@ -152,3 +152,5 @@ guard:
     disposable: "Disposable e-mail addresses are not accepted: please give another one."
     unreachable: "This form could not be checked just now: please try again in a moment."
     spam: "This message was refused as spam."
+    # The consent panel's switch for a captcha that reaches a third party (its origins).
+    consent: "Robot check ({origins})"
