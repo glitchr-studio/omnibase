@@ -6,6 +6,9 @@ Versions follow the branch-per-major scheme: branch `3.x` → tags `3.0.0`,
 
 ## [Unreleased]
 
+### Changed
+- License: MIT since 2026-10-09; earlier versions remain published under LGPL-3.0-or-later. `COPYING` and `COPYING.LESSER` removed, `LICENSE` holds the MIT text.
+
 ### Added
 - The `demo` environment (`docs/20-architecture/demo.md`): demonstration
   accounts declared by the bundles and the application

@@ -6,9 +6,8 @@ domain code. The `Base\` namespace deliberately mirrors the host apps' `App\`
 structure — a host class can usually extend or decorate its `Base\` counterpart
 one-to-one.
 
-Requires PHP ≥ 8.1 and Symfony 6, 7 or 8. Licensed LGPL-3.0-or-later
-(the license in `LICENSE`, also `COPYING.LESSER`; the GNU GPL v3 it
-supplements in `COPYING`).
+Requires PHP ≥ 8.1 and Symfony 6, 7 or 8. Licensed MIT (`LICENSE`) since 2026-10-09;
+earlier versions remain published under LGPL-3.0-or-later.
 
 ## Docker: every plugin, running
 

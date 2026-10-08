@@ -71,7 +71,7 @@
     "y-websocket": "^2.1.0",
     "yjs": "^13.6.0"
   },
-  "license": "LGPL-3.0-or-later",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "dev-server": "encore dev-server",
