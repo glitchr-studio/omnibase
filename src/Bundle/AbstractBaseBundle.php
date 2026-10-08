@@ -275,6 +275,36 @@ abstract class AbstractBaseBundle extends Bundle
      * that is registered uses it without its package. Any other error (a parse
      * error, a broken bundle) still surfaces.
      */
+    /**
+     * Declares $alias as $class unless something already answers to $alias:
+     * a class loaded, or one an autoloader finds a file for - the
+     * application's own App\Enum\X, not loaded yet, is never replaced by
+     * Base\Enum\X. The stubs glitchr/base-plugin writes for the classes an
+     * application does not define are no definition of its own. True when
+     * the alias is declared (or already was, to that class).
+     */
+    public static function declareAlias(string $class, string $alias): bool
+    {
+        if (class_exists($alias, false) || interface_exists($alias, false) || trait_exists($alias, false)) {
+            return (new \ReflectionClass($alias))->getName() === ltrim($class, "\\");
+        }
+
+        foreach (\Composer\Autoload\ClassLoader::getRegisteredLoaders() as $loader) {
+            $file = $loader->findFile($alias);
+            if (false !== $file && !str_contains(str_replace("\\", "/", (string) realpath($file) ?: $file), "/base-plugin/stubs/")) {
+                return false;
+            }
+        }
+
+        if (!class_exists($class) && !interface_exists($class) && !trait_exists($class)) {
+            return false;
+        }
+
+        class_alias($class, $alias);
+
+        return true;
+    }
+
     public static function classLoads(string $class): bool
     {
         try {

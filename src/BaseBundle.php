@@ -133,11 +133,12 @@ class BaseBundle extends AbstractBaseBundle
         // warmUp() runs more than once in a process (the dev kernel reboots after
         // a cache rebuild), and class_alias() on an alias that already exists
         // is a warning - turned into a 500 on whatever page was being served.
+        // an application's own class, not loaded yet, is never replaced (declareAlias)
         foreach (self::$aliasList as $class => $alias) {
-            if (!class_exists($alias, false)) class_alias($class, $alias);
+            self::declareAlias($class, $alias);
         }
         foreach (self::$aliasRepositoryList as $class => $alias) {
-            if (!class_exists($alias, false)) class_alias($class, $alias);
+            self::declareAlias($class, $alias);
         }
 
         // One builder at a time. Without this, every request that finds the
@@ -256,11 +257,12 @@ class BaseBundle extends AbstractBaseBundle
         self::$classes = $cache->getItem('base.classes')->get() ?? [];
         self::$aliasList = $aliasList;
         self::$aliasRepositoryList = $aliasRepositoryList;
+        // an application's own class, not loaded yet, is never replaced (declareAlias)
         foreach (self::$aliasList as $class => $alias) {
-            if (!class_exists($alias, false)) class_alias($class, $alias);
+            self::declareAlias($class, $alias);
         }
         foreach (self::$aliasRepositoryList as $class => $alias) {
-            if (!class_exists($alias, false)) class_alias($class, $alias);
+            self::declareAlias($class, $alias);
         }
         return true;
     }
