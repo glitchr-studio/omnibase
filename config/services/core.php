@@ -135,6 +135,15 @@ return static function (ContainerConfigurator $container): void {
         ->tag('kernel.event_subscriber')
         ->tag('kernel.reset', ['method' => 'reset']);
 
+    // cache:clear empties what remembers the code: the mapping's metadata, the parsed DQL, the routes
+    $services->set('Base\Cache\Clearer\CodeCachesClearer')
+        ->args([[
+            service('doctrine.orm.default_metadata_cache')->nullOnInvalid(),
+            service('doctrine.orm.default_query_cache')->nullOnInvalid(),
+            service('cache.adapter')->nullOnInvalid(),
+        ]])
+        ->tag('kernel.cache_clearer');
+
     // AdvancedRouter
     $services->set('Base\Routing\AdvancedRouter')
         ->tag('twig.runtime')
