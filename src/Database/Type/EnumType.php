@@ -34,8 +34,11 @@ abstract class EnumType extends Type implements SelectInterface
 
         while ($class) {
             if (class_implements_interface($class, IconizeInterface::class)) {
-                if (($missingKeys = array_keys(array_key_removes($class::__iconizeStatic(), ...$class::getPermittedValues(false))))) {
-                    throw new UnexpectedValueException("The following keys \"" . implode(",", $missingKeys) . "\" are missing in the list of the available icons on class \"" . get_called_class() . "\".");
+                // An icon may be given to any value the class has, its own or inherited (an application's
+                // enumeration names its roles' and the core's in one place); one given to a value it does
+                // not have is a mistake.
+                if (($unknownKeys = array_keys(array_key_removes($class::__iconizeStatic() ?? [], ...$class::getPermittedValues(true))))) {
+                    throw new UnexpectedValueException("The following keys \"" . implode(",", $unknownKeys) . "\" are in the list of the available icons on class \"" . get_called_class() . "\", which has no such value.");
                 }
 
                 $icons = array_union($icons, $class::__iconizeStatic());
