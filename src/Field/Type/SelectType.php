@@ -1072,8 +1072,10 @@ class SelectType extends AbstractType implements DataMapperInterface
 
                     // Choices given as ['Label' => 'value'] (Symfony's own shape) are shown
                     // by their label, translated when it is a key ('@agenda.role.soloist'):
-                    // the value was printed in its place, the key never read.
-                    if (!$options["class"] && is_string($key) && $key !== "") {
+                    // the value was printed in its place, the key never read. A key that is
+                    // the value itself (array_combine($codes, $codes)) is no label: the
+                    // entry keeps the text its type gives (SelectInterface::getText()).
+                    if (!$options["class"] && is_string($key) && $key !== "" && $key !== $choices) {
                         $entry["text"] = castcase($this->translator->trans($key), $entryFormat);
                     }
 

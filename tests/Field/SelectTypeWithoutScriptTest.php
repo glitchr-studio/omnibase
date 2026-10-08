@@ -6,6 +6,9 @@ use Base\Entity\Thread\Comment;
 use Base\Enum\CommentState;
 use Base\Field\Type\CurrencyType;
 use Base\Field\Type\SelectType;
+use Base\Service\Model\SelectInterface;
+use Symfony\Component\Form\AbstractType;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Form\Extension\Core\Type\FormType;
 use Symfony\Component\Form\FormInterface;
@@ -312,5 +315,61 @@ class SelectTypeWithoutScriptTest extends KernelTestCase
         $this->assertSame(['in_stock' => 'In stock', 'on_order' => 'On order', 'sold_out' => 'Sold out'], array_column($select2['data'], 'text', 'id'));
         $this->assertSame(['on_order'], $select2['selected']);
         $this->assertArrayNotHasKey('select2-entries', $view->vars);
+    }
+
+    /**
+     * A type that names its choices itself (SelectInterface::getText()) and gives them as
+     * array_combine($codes, $codes) - Symfony's usual shape: the key is no label, the value
+     * repeated. Each is shown by the type's text, in select2's data and in the options the
+     * server prints; it was shown by its code since the labels of ['Label' => 'value'] are read.
+     */
+    public function testChoicesKeyedByThemselvesAreNamedByTheirType(): void
+    {
+        foreach ([['currency', SignedCurrencyType::class, ['EUR' => '€ EUR', 'USD' => '$ USD', 'CHF' => 'CHF']], ['languages', SpokenLanguageType::class, ['FR' => 'Français', 'DE' => 'Deutsch', 'JP' => '日本語']]] as [$field, $type, $named]) {
+            $form = $this->form([$field => null], [$field => [$type, []]]);
+            $select2 = json_decode($form->createView()[$field]->vars['select2'], true);
+            $this->assertSame($named, array_column($select2['data'], 'text', 'id'), $field.': select2\'s data');
+
+            $options = $this->options($this->select($this->form([$field => null], [$field => [$type, []]]), $field));
+            unset($options['']);
+            $this->assertSame($named, $options, $field.': the options the server prints');
+        }
+
+        // A label of its own still wins: ['Label' => 'value'] is shown by its label.
+        $form = $this->form(['currency' => null], ['currency' => [SignedCurrencyType::class, ['choices' => ['Euro' => 'EUR', 'Dollar' => 'USD']]]]);
+        $select2 = json_decode($form->createView()['currency']->vars['select2'], true);
+        $this->assertSame(['EUR' => 'Euro', 'USD' => 'Dollar'], array_column($select2['data'], 'text', 'id'));
+    }
+}
+
+/** A few currencies with their signs, named by the type (as a site's footer does). */
+class SignedCurrencyType extends AbstractType implements SelectInterface
+{
+    public static function getIcon(string $id, int $index = -1): ?string { return null; }
+    public static function getText(string $id): ?string { return ['EUR' => '€ EUR', 'USD' => '$ USD'][$id] ?? $id; }
+    public static function getHtml(string $id): ?string { return null; }
+    public static function getData(string $id): ?array { return []; }
+    public function getParent(): string { return SelectType::class; }
+    public function configureOptions(OptionsResolver $resolver): void
+    {
+        $codes = ['EUR', 'USD', 'CHF'];
+        $resolver->setDefaults(['choices' => array_combine($codes, $codes), 'required' => false]);
+    }
+}
+
+/** Languages, each named as its speakers name it, by the type. */
+class SpokenLanguageType extends AbstractType implements SelectInterface
+{
+    private const NAMES = ['FR' => 'Français', 'DE' => 'Deutsch', 'JP' => '日本語'];
+
+    public static function getIcon(string $id, int $index = -1): ?string { return null; }
+    public static function getText(string $id): ?string { return self::NAMES[$id] ?? $id; }
+    public static function getHtml(string $id): ?string { return null; }
+    public static function getData(string $id): ?array { return []; }
+    public function getParent(): string { return SelectType::class; }
+    public function configureOptions(OptionsResolver $resolver): void
+    {
+        $codes = array_keys(self::NAMES);
+        $resolver->setDefaults(['choices' => array_combine($codes, $codes), 'multiple' => true]);
     }
 }
