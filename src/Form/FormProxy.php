@@ -5,8 +5,15 @@ namespace Base\Form;
 use Exception;
 use Symfony\Component\Form\Extension\Core\Type\FormType;
 use Symfony\Component\Form\FormInterface;
+use Symfony\Contracts\Service\ResetInterface;
 
-class FormProxy implements FormProxyInterface
+/**
+ * The forms of a request, by name. Reset between two requests (kernel.reset):
+ * a kernel that serves several - a test client's, a worker's - kept the
+ * sign-in form under "form:login", and the sign-up page, which asks for a
+ * processor of that name, rendered the sign-in form.
+ */
+class FormProxy implements FormProxyInterface, ResetInterface
 {
     /**
      * @var FormFactoryInterface
@@ -16,7 +23,7 @@ class FormProxy implements FormProxyInterface
     /**
      * @var array[FormProcessorInterface]
      */
-    protected array $formProcessors;
+    protected array $formProcessors = [];
 
     public function __construct(FormFactoryInterface $formFactory)
     {
@@ -111,7 +118,20 @@ class FormProxy implements FormProxyInterface
 
     public function createProcessor(string $name, string $formTypeClass = FormType::class, array $options = [], array $listeners = []): ?FormProcessorInterface
     {
+        // a processor of that name made for another type of form is not this one: the pages that share
+        // a name ("form:login": the sign-in, the sign-in by a link, the sign-up) each get their own
+        $existing = $this->formProcessors[$name] ?? null;
+        if (null !== $existing && $formTypeClass !== get_class($existing->getForm()->getConfig()->getType()->getInnerType())) {
+            unset($this->formProcessors[$name], $this->forms[$name]);
+        }
+
         $this->formProcessors[$name] = $this->formProcessors[$name] ?? new FormProcessor($this->get($name) ?? $this->create($name, $formTypeClass, null, $options, $listeners));
         return $this->formProcessors[$name];
+    }
+
+    public function reset(): void
+    {
+        $this->forms = [];
+        $this->formProcessors = [];
     }
 }

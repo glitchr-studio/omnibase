@@ -18,7 +18,8 @@ return static function (ContainerConfigurator $container): void {
     // Form proxy
     $services->set('Base\Form\FormProxy')
         ->public(true)
-        ->args([service('form.factory')]);
+        ->args([service('form.factory')])
+        ->tag('kernel.reset', ['method' => 'reset']);
 
     // Session storage
     $services->set('Base\Security\Session\DynamicSessionStorageFactory')
