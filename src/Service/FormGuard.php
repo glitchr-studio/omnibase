@@ -186,7 +186,10 @@ class FormGuard
             }
         }
 
-        if (!$lists) {
+        // No list to ask - none configured, or glitchr/omniguard (suggested, not required) not installed:
+        // the trap and the time alone. Its Identity is not even built then: without the family the class
+        // does not exist, and the first guarded form sent answered 500.
+        if (!$lists || [] === $this->reputationGateways()) {
             return null;
         }
         $email = $this->value($form, $emailField);
