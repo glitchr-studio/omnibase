@@ -1,0 +1,11 @@
+# Documents signed (glitchr/omnisign, Base\Service\Signatures): a DocuSeal instance of one's own.
+# The address and keys are the harness's, known to everyone: no instance answers there, the suite
+# asks DocuSeal through its recorded answers (Tests\Base\Service\SignaturesTest).
+omnisign:
+    gateways:
+        contracts:
+            factory: docuseal
+            options:
+                url: 'http://localhost:13300/api'
+                api_key: 'harness-docuseal-key-known-to-everyone'
+                webhook_secret: 'harness-webhook-secret-known-to-everyone'

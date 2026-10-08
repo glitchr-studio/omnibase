@@ -42,6 +42,19 @@ return static function (ContainerConfigurator $container): void {
         ->arg('$comments', service('Base\Repository\Thread\CommentRepository')->nullOnInvalid())
         ->arg('$logger', service('logger')->nullOnInvalid());
     $services->set('Base\Service\CommentGuard')->public();
+    // Documents signed through glitchr/omnisign, for any entity (Base\Entity\Signature\Envelope, mapped only
+    // then too): suggested, not required - registered when the family is installed; its gateways when its
+    // bundle is registered. Its webhook's controller answers 404 without it.
+    if (class_exists('Omnisign\\Registry')) {
+        $services->set('Base\Service\Signatures')->public()
+            ->arg('$registry', service('Omnisign\Registry')->nullOnInvalid())
+            ->arg('$flysystem', service('flysystem'))
+            ->arg('$dispatcher', service('event_dispatcher')->nullOnInvalid())
+            ->arg('$logger', service('logger')->nullOnInvalid());
+    }
+    $services->set('Base\Controller\SignatureController')->public()
+        ->arg('$signatures', service('Base\Service\Signatures')->nullOnInvalid())
+        ->tag('controller.service_arguments');
     // The sign-in's captcha after a few failures from an address (base.guard.sign_in_after).
     $services->set('Base\Security\SignInGuard')->public()
         ->arg('$cache', service('cache.app')->nullOnInvalid())

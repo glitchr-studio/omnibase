@@ -7,7 +7,8 @@ order: 50
 
 `docker/` builds this checkout into one Symfony application with every
 `omnibase/*` plugin (admin, marketplace, forge, forum, mailbox, docs), paying
-through `glitchr/omnitrade` and shipping through `glitchr/omnibus`, on SQLite.
+through `glitchr/omnitrade`, shipping through `glitchr/omnibus` and signing through
+`glitchr/omnisign` (a DocuSeal gateway, its recorded answers in the tests), on SQLite.
 It is where the bundles' suites run: there is no PHP on the host.
 
 ```sh

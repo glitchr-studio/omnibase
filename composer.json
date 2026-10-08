@@ -48,6 +48,16 @@
             "type": "vcs",
             "url": "https://github.com/glitchr-studio/omniguard-disposable.git",
             "no-api": true
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/glitchr-studio/omnisign.git",
+            "no-api": true
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/glitchr-studio/omnisign-docuseal.git",
+            "no-api": true
         }
     ],
     "require": {
@@ -119,7 +129,9 @@
         "glitchr/omniguard": "Base\\Service\\FormGuard's captcha, address lists and content classifier (the option `guard` of a form, Akismet behind SpamChecker): register Omniguard\\Bridge\\Symfony\\OmniguardBundle; not on Packagist yet - a vcs repository, https://github.com/glitchr-studio/omniguard",
         "omniguard/altcha": "ALTCHA, the default captcha of FormGuard: a proof of work served and checked by the site, no third party, no cookie, no consent",
         "omniguard/akismet": "Akismet behind Base\\Service\\SpamChecker (base.guard.classifier)",
-        "omniguard/disposable": "Disposable e-mail domains refused at sign-up (base.guard.reputation)"
+        "omniguard/disposable": "Disposable e-mail domains refused at sign-up (base.guard.reputation)",
+        "glitchr/omnisign": "Base\\Service\\Signatures: documents signed for any entity (Base\\Entity\\Signature\\Envelope, mapped only with it), the signed file and its evidence kept in the private storage; register Omnisign\\Bridge\\Symfony\\OmnisignBundle; not on Packagist yet - a vcs repository, https://github.com/glitchr-studio/omnisign",
+        "omnisign/docuseal": "A DocuSeal instance of one's own: nothing leaves for a third party (omnisign/yousign, omnisign/docusign for the providers)"
     },
     "require-dev": {
         "phpstan/phpstan": "^1.12",
@@ -137,7 +149,9 @@
         "glitchr/omniguard": "1.x-dev",
         "omniguard/akismet": "1.x-dev",
         "omniguard/altcha": "1.x-dev",
-        "omniguard/disposable": "1.x-dev"
+        "omniguard/disposable": "1.x-dev",
+        "glitchr/omnisign": "1.x-dev",
+        "omnisign/docuseal": "1.x-dev"
     },
     "minimum-stability": "dev",
     "prefer-stable": true,

@@ -18,6 +18,7 @@ An application or an `omnibase/*` bundle uses these; it does not keep a copy.
 | Invitation by token | `Base\Entity\User\Invitation`, `Base\Service\Invitations` | [Invitations](invitations.md) |
 | Signed download links | `Base\Service\DownloadLinks` | [Downloads and QR codes](downloads-and-qr.md) |
 | QR codes, A4 and Avery sheets | `Base\Service\Qr\{QrCode, QrSheet}` | [Downloads and QR codes](downloads-and-qr.md) |
+| Documents signed for any entity (glitchr/omnisign, suggested) | `Base\Service\Signatures`, `Base\Entity\Signature\Envelope`, `SignatureEvent` | [Signatures](signatures.md) |
 | An HTML page answered as a PDF | `Base\Response\PdfResponse` (dompdf/dompdf, suggested) | [PDF responses](pdf.md) |
 | The e-mail frame, a subject written in the template | `@Base/notifier/email.html.twig`, `{% block subject %}` | [E-mails](emails.md) |
 | EU allergens | `Base\Enum\Allergen` | [Allergens](allergens.md) |

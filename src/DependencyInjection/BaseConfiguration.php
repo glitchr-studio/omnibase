@@ -787,6 +787,14 @@ class BaseConfiguration extends AbstractBaseConfiguration
                 ->end()
             ->end()
 
+            // Documents signed through glitchr/omnisign (Base\Service\Signatures): only with that family.
+            ->arrayNode('signatures')->addDefaultsIfNotSet()
+                ->children()
+                    ->scalarNode('gateway')->defaultNull()->info('The gateway envelopes go through: one of omnisign.gateways. Null: the only one configured.')->end()
+                    ->scalarNode('storage')->defaultNull()->info('The private Flysystem storage the signed documents and their evidence are kept in. Null: the uploads\' (base.uploader.storage).')->end()
+                ->end()
+            ->end()
+
             ->arrayNode('comments')->addDefaultsIfNotSet()
                 ->children()
                     ->integerNode('min_delay')->min(0)->defaultValue(4)->info('Seconds between a comment form being opened and sent: faster is a robot.')->end()
