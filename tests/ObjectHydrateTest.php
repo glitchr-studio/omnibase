@@ -54,6 +54,16 @@ class ObjectHydrateTest extends TestCase
         $this->assertSame(HydratedPriority::Low, $entity->priority);
     }
 
+    public function testDataAPropertyCannotHoldIsLeftOutNotFatal(): void
+    {
+        // a column of another type than the property (an array for a string, a word for a date)
+        $entity = object_hydrate(new HydratedEntity(), ['title' => ['not', 'a', 'string'], 'when' => 'yesterday', 'status' => 'published']);
+
+        $this->assertNull($entity->title);
+        $this->assertNull($entity->when);
+        $this->assertSame(HydratedStatus::Published, $entity->status, 'the rest is still hydrated');
+    }
+
     public function testAUnionThatTakesTheStringKeepsIt(): void
     {
         $entity = object_hydrate(new HydratedEntity(), ['label' => 'published']);
@@ -88,4 +98,5 @@ class HydratedEntity
     public ?HydratedShape $shape = null;
     public HydratedStatus|string|null $label = null;
     public ?string $title = null;
+    public ?\DateTimeInterface $when = null;
 }

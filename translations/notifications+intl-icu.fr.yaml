@@ -88,6 +88,7 @@ accountCreated:
 
 changePassword:
     success: "Ton mot de passe est choisi, bienvenue !"
+    success._polite: "Votre mot de passe est choisi, bienvenue !"
 
 resetPassword:
     title: "Réinitialisation de ton mot de passe"
