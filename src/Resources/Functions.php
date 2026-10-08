@@ -4102,7 +4102,12 @@ namespace {
                 }
 
                 $reflProperty->setAccessible(true);
-                $reflProperty->setValue($object, $value);
+                try {
+                    $reflProperty->setValue($object, $value);
+                } catch (TypeError) {
+                    // Data the property cannot hold is left out, not fatal.
+                    continue;
+                }
             }
 
         } while ($reflClass = $reflClass->getParentClass());

@@ -190,6 +190,12 @@ class LocalizerSubscriber implements EventSubscriberInterface
         $this->localizer->markAsLate();
         $request->attributes->set(self::DISPLAYED_LOCALE, $locale);
 
+        // And the router's: Symfony's LocaleListener handed it the request's
+        // locale before this one decided it (priority 16 against 8), and
+        // the links of a page without a language of its own (/blog) came
+        // out in the default language, whatever the visitor's.
+        $this->router->getContext()->setParameter('_locale', $locale);
+
         //
         // Set timezone
         //
