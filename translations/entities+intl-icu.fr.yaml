@@ -60,6 +60,10 @@ thread:
     _plural: "taxonomies"
 
 layout:
+  # Base\Entity\Layout\Redirection (omnibase/admin's screen /admin/redirections).
+  redirection:
+    _singular: "redirection"
+    _plural: "redirections"
   image:
     _singular: "image"
     _plural: "images"
