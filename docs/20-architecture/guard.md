@@ -17,7 +17,7 @@ $this->createForm(ContactType::class, $model, ['guard' => ['action' => 'contact'
 | 1. the trap | `guard_website`, a field off-screen for people, filled by robots | refused, on the form (`guard.trapped`) |
 | 2. the time | `guard_opened`, when the form was shown, signed with the application's secret | refused when sent faster than `min_delay` (`guard.too_fast`), or with a stamp that is not the site's (`guard.stale`) |
 | 3. the lists | whoever sends it - the address, the e-mail, the name - asked of the gateways of `base.guard.reputation` | a disposable e-mail on its field (`guard.disposable`); anything else known on the form (`guard.known`) |
-| 4. the captcha | `guard_captcha`, glitchr/omniguard's `ChallengeType` on the gateway of `base.guard.challenge` | its own constraint, on its field |
+| 4. the captcha | `guard_captcha`, glitchr/omnishield's `ChallengeType` on the gateway of `base.guard.challenge` | its own constraint, on its field |
 | 5. what was written | data implementing `SpamProtectionInterface`, classified by `SpamChecker` (Akismet) | told to the data (`getSpamCallback()`); blatant spam refused (`guard.spam`) |
 
 Step 5 is `spam_protection`, on by default outside the back office as it always was: it runs
@@ -38,35 +38,35 @@ The messages are the `forms` domain's `guard.*` (French and English), the captch
 | `reputation` | `true` | ask the lists |
 | `email`, `name` | `email`, `name` | the fields - or the data's properties - holding the sender's e-mail and name |
 
-## Without glitchr/omniguard
+## Without glitchr/omnishield
 
-glitchr/omniguard is suggested, not required (it is not on Packagist yet). Without it - or
+glitchr/omnishield is suggested, not required (it is not on Packagist yet). Without it - or
 without a gateway configured - the trap and the time alone, and no error. With it:
 
 ```php
 // config/bundles.php
-Omniguard\Bridge\Symfony\OmniguardBundle::class => ['all' => true],
+Omnishield\Bridge\Symfony\OmnishieldBundle::class => ['all' => true],
 ```
 
 ```yaml
-# config/packages/omniguard.yaml
-omniguard:
+# config/packages/omnishield.yaml
+omnishield:
     gateways:
         forms: { factory: altcha, options: { hmac_key: '%env(ALTCHA_HMAC_KEY)%' } }
         emails: { factory: disposable }
     challenge: { gateway: forms }
 
 when@test:
-    omniguard:
+    omnishield:
         gateways:
-            forms: { factory: fixed }      # the hidden field omniguard-token carries omniguard-fixed-token
+            forms: { factory: fixed }      # the hidden field omnishield-token carries omnishield-fixed-token
 ```
 
 ```yaml
 # config/packages/base.yaml
 base:
     guard:
-        challenge: ~             # the captcha: null for omniguard.challenge.gateway, a gateway's name, false for none
+        challenge: ~             # the captcha: null for omnishield.challenge.gateway, a gateway's name, false for none
         fallback: ~              # the captcha of a visitor who refused the third party the captcha reaches
         reputation: [emails]     # the lists asked about the sender
         classifier: ~            # the classifier behind SpamChecker; null: Akismet with api.spam.akismet
@@ -75,8 +75,8 @@ base:
         sign_in_after: 3         # failed sign-ins from an address before the sign-in asks the captcha
 ```
 
-The captcha's own conduct when its provider does not answer is omniguard's
-(`omniguard.challenge.unreachable`).
+The captcha's own conduct when its provider does not answer is omnishield's
+(`omnishield.challenge.unreachable`).
 
 ## With glitchr/ux-google
 
@@ -107,10 +107,10 @@ Not the rescue door, not the demonstration's one click; nothing where ux-google'
 
 ## Consent
 
-ALTCHA, the default, reaches nobody: omniguard's Symfony bridge serves its widget's script from
-the site (omniguard/altcha ships it: `/omniguard/altcha/3.3.0/altcha.min.js`), so the page loads
+ALTCHA, the default, reaches nobody: omnishield's Symfony bridge serves its widget's script from
+the site (omnishield/altcha ships it: `/omnishield/altcha/3.3.0/altcha.min.js`), so the page loads
 nothing from anyone else and there is no consent to ask. Nothing to add on a site but
-omniguard's bundle; `omniguard.serve_scripts: false` would put the CDN back.
+omnishield's bundle; `omnishield.serve_scripts: false` would put the CDN back.
 
 A captcha whose widget reaches a third party (`Widget::reachesOthers()`: Turnstile, reCAPTCHA,
 ALTCHA's script when a site names a CDN) waits for the visitor's consent - omnibase/consent's feature
@@ -132,8 +132,8 @@ when@test:
             sign_in_after: 0
 ```
 
-With `factory: fixed` as the test captcha, the page prints a hidden `omniguard-token` field
-holding `omniguard-fixed-token`, outside the form: a test client that submits the page's form
+With `factory: fixed` as the test captcha, the page prints a hidden `omnishield-token` field
+holding `omnishield-fixed-token`, outside the form: a test client that submits the page's form
 sends it; a request built by hand adds it.
 
 ## The comment forms

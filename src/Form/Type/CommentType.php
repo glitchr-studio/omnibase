@@ -57,7 +57,7 @@ class CommentType extends AbstractType
     {
         $resolver->setDefaults([
             // The forms' guard (Base\Service\FormGuard) on top of the form's own trap (`url`) and time
-            // (`opened`, read by CommentGuard): the lists, and the captcha when glitchr/omniguard has
+            // (`opened`, read by CommentGuard): the lists, and the captcha when glitchr/omnishield has
             // one - none when the form asks ux-google's reCAPTCHA itself (`recaptcha`).
             'guard' => static fn (Options $options) => ['trap' => false, 'min_delay' => 0, 'challenge' => !$options['recaptcha'], 'action' => 'comment'],
             'data_class' => CommentModel::class,

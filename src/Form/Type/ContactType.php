@@ -57,7 +57,7 @@ class ContactType extends AbstractType
             'privacy_consent' => false,
             'privacy_parameters' => [],
             // The forms' guard (Base\Service\FormGuard): a trap, the time, the lists, the captcha
-            // when glitchr/omniguard has one. `guard => false` for a form a site guards otherwise.
+            // when glitchr/omnishield has one. `guard => false` for a form a site guards otherwise.
             'guard' => ['action' => 'contact'],
         ]);
         foreach (['phone', 'subject', 'attachments', 'buttons', 'trap', 'privacy_consent'] as $option) {

@@ -113,8 +113,8 @@ class SignInByLinkHttpTest extends KernelTestCase
         }
         $this->assertArrayHasKey('email', $fields, 'the form asks for an address');
 
-        // With the token the test environment's captcha (omniguard's fixed gateway) prints in the page, outside the form.
-        $answer = $this->browse('/login/token', ['_base_security_login_token' => ['email' => $email] + $fields, 'omniguard-token' => 'omniguard-fixed-token']);
+        // With the token the test environment's captcha (omnishield's fixed gateway) prints in the page, outside the form.
+        $answer = $this->browse('/login/token', ['_base_security_login_token' => ['email' => $email] + $fields, 'omnishield-token' => 'omnishield-fixed-token']);
 
         return [$answer->getStatusCode(), (string) $answer->headers->get('Location'), $this->flashes()];
     }

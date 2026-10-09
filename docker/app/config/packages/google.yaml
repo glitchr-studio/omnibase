@@ -3,7 +3,7 @@ google:
         enable: false
     maps:
         enable: false
-    # As on the sites: glitchr/ux-google's reCAPTCHA off - omniguard's captcha guards the forms
+    # As on the sites: glitchr/ux-google's reCAPTCHA off - omnishield's captcha guards the forms
     # (Base\Service\FormGuard); where it is on, the guard adds none of its own.
     recaptcha:
         enable: false

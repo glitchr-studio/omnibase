@@ -6,24 +6,24 @@ use Base\Enum\SpamApi;
 use Base\Enum\SpamScore;
 use Base\Routing\AdvancedRouterInterface;
 use Base\Service\Model\SpamProtectionInterface;
-use Omniguard\Akismet\AkismetGatewayFactory;
-use Omniguard\ClassifierInterface;
-use Omniguard\Exception\InvalidKeyException;
-use Omniguard\Exception\OmniguardException;
-use Omniguard\Exception\ProviderException;
-use Omniguard\Model\Label;
-use Omniguard\Model\Submission;
+use Omnishield\Akismet\AkismetGatewayFactory;
+use Omnishield\ClassifierInterface;
+use Omnishield\Exception\InvalidKeyException;
+use Omnishield\Exception\OmnishieldException;
+use Omnishield\Exception\ProviderException;
+use Omnishield\Model\Label;
+use Omnishield\Model\Submission;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
- * Is what a visitor wrote spam? The classifier of glitchr/omniguard behind
+ * Is what a visitor wrote spam? The classifier of glitchr/omnishield behind
  * omnibase's SpamCheckerInterface (check, score), which the forms
  * (spam_protection), the comments and omnibase/faq's questions ask:
  *
- *   - base.guard.classifier, a gateway of omniguard.gateways;
- *   - else Akismet (omniguard/akismet), with the key typed in the back
+ *   - base.guard.classifier, a gateway of omnishield.gateways;
+ *   - else Akismet (omnishield/akismet), with the key typed in the back
  *     office (api.spam.akismet, admin's SpamKeySection) or configured
  *     (base.spam.akismet);
  *   - else nothing is asked: NOT_SPAM, as without a key before.
@@ -115,7 +115,7 @@ class SpamChecker implements SpamCheckerInterface
 
                 return $this->classifier = $gateway instanceof ClassifierInterface ? $gateway : null;
             }
-        } catch (OmniguardException $e) {
+        } catch (OmnishieldException $e) {
             $this->logger?->error('Spam checker: the classifier could not be built: {message}', ['message' => $e->getMessage()]);
         }
 
@@ -178,7 +178,7 @@ class SpamChecker implements SpamCheckerInterface
             $this->logger?->warning('Spam checker: {classifier} did not answer: {message}', ['classifier' => $classifier->getName(), 'message' => $e->getMessage()]);
 
             return $enum[$this->guard?->rejectsUnreachable() ? SpamScore::MAYBE_SPAM : SpamScore::NOT_SPAM];
-        } catch (OmniguardException $e) {
+        } catch (OmnishieldException $e) {
             // A submission the classifier cannot take (no visitor's address, from the command line): not asked.
             $this->logger?->warning('Spam checker: nothing asked of {classifier}: {message}', ['classifier' => $classifier->getName(), 'message' => $e->getMessage()]);
 

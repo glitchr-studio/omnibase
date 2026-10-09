@@ -70,10 +70,10 @@ RUN echo "omni families as of ${OMNI_REFRESH}" \
         "glitchr/omnitrade:1.x-dev" "omnitrade/stripe:1.x-dev" "glitchr/omnibus:2.x-dev" "omnibus/offline:2.x-dev" "omnibus/mondial-relay:2.x-dev" \
         omnipay/stripe symfony/translation symfony/messenger symfony/lock \
         dompdf/dompdf horstoeko/zugferd --no-interaction --no-progress --no-scripts \
-    # The guard of the forms (Base\Service\FormGuard): glitchr/omniguard and three of its gateways,
+    # The guard of the forms (Base\Service\FormGuard): glitchr/omnishield and three of its gateways,
     # from their repositories - not on Packagist yet; cloned over https (no-api: no GitHub token here).
-    && for r in omniguard omniguard-akismet omniguard-altcha omniguard-disposable; do composer config "repositories.$r" "{\"type\": \"vcs\", \"url\": \"https://github.com/glitchr-studio/$r.git\", \"no-api\": true}"; done \
-    && composer require "glitchr/omniguard:1.x-dev" "omniguard/akismet:1.x-dev" "omniguard/altcha:1.x-dev" "omniguard/disposable:1.x-dev" --no-interaction --no-progress --no-scripts \
+    && for r in omnishield omnishield-akismet omnishield-altcha omnishield-disposable; do composer config "repositories.$r" "{\"type\": \"vcs\", \"url\": \"https://github.com/glitchr-studio/$r.git\", \"no-api\": true}"; done \
+    && composer require "glitchr/omnishield:1.x-dev" "omnishield/akismet:1.x-dev" "omnishield/altcha:1.x-dev" "omnishield/disposable:1.x-dev" --no-interaction --no-progress --no-scripts \
     # Documents signed (Base\Service\Signatures): glitchr/omnisign and its DocuSeal gateway, the same way.
     && for r in omnisign omnisign-docuseal; do composer config "repositories.$r" "{\"type\": \"vcs\", \"url\": \"https://github.com/glitchr-studio/$r.git\", \"no-api\": true}"; done \
     && composer require "glitchr/omnisign:1.x-dev" "omnisign/docuseal:1.x-dev" --no-interaction --no-progress --no-scripts \

@@ -28,7 +28,7 @@ use Symfony\Contracts\Translation\TranslatorInterface;
  *     $this->createForm(ContactType::class, $model, ['guard' => ['action' => 'contact', 'min_delay' => 5]]);
  *
  * It adds a trap (guard_website), the stamp of the time the form was shown
- * (guard_opened) and - with glitchr/omniguard and a captcha configured - the
+ * (guard_opened) and - with glitchr/omnishield and a captcha configured - the
  * captcha (guard_captcha); after the submission it refuses a trap filled, a
  * form sent too fast, a sender the lists know. The captcha is checked by its
  * own constraint, on its field.
@@ -126,12 +126,12 @@ class FormTypeGuardExtension extends AbstractTypeExtension
 
         $gateway = false === $guard['challenge'] ? null : (\is_string($guard['challenge']) ? $guard['challenge'] : $this->guard->challengeGateway());
         $google = (bool) ($options['captcha_protection'] ?? false);
-        if (null !== $gateway && !$google && class_exists(\Omniguard\Bridge\Symfony\Form\ChallengeType::class)) {
+        if (null !== $gateway && !$google && class_exists(\Omnishield\Bridge\Symfony\Form\ChallengeType::class)) {
             // Checked by the guard itself (below), not by the field's constraint: in the guard's order,
             // and whatever the form's validation groups - a constraint of the Default group is not
             // asked by a form validated in "new" alone (the sign-up).
             $action = $guard['action'] ?? $this->action($builder->getName());
-            $builder->add(FormGuard::CHALLENGE_FIELD, \Omniguard\Bridge\Symfony\Form\ChallengeType::class, [
+            $builder->add(FormGuard::CHALLENGE_FIELD, \Omnishield\Bridge\Symfony\Form\ChallengeType::class, [
                 'gateway' => $gateway,
                 'action' => $action,
                 'constraints' => [],
@@ -146,7 +146,7 @@ class FormTypeGuardExtension extends AbstractTypeExtension
             $fallback = $this->guard->fallbackGateway();
             if ($widget?->reachesOthers() && (null !== $fallback && $fallback !== $gateway || $widget->cookies)) {
                 if (null !== $fallback && $fallback !== $gateway) {
-                    $builder->add(FormGuard::FALLBACK_FIELD, \Omniguard\Bridge\Symfony\Form\ChallengeType::class, ['gateway' => $fallback, 'action' => $action, 'constraints' => []]);
+                    $builder->add(FormGuard::FALLBACK_FIELD, \Omnishield\Bridge\Symfony\Form\ChallengeType::class, ['gateway' => $fallback, 'action' => $action, 'constraints' => []]);
                 }
                 $builder->setAttribute('guard_consent', true);
             }
@@ -191,11 +191,11 @@ class FormTypeGuardExtension extends AbstractTypeExtension
         }
         $captcha = $view[FormGuard::CHALLENGE_FIELD];
         $id = $captcha->vars['id'];
-        $origins = implode(', ', $captcha->vars['omniguard_widget']->origins ?? []);
+        $origins = implode(', ', $captcha->vars['omnishield_widget']->origins ?? []);
         $label = $this->translator?->trans('@forms.guard.consent', ['origins' => $origins]) ?? 'Captcha';
         $fallback = isset($view[FormGuard::FALLBACK_FIELD]) ? $view[FormGuard::FALLBACK_FIELD]->vars['id'] : null;
         if ($fallback) {
-            $view[FormGuard::FALLBACK_FIELD]->vars['omniguard_html'] = '<div data-guard-fallback="'.$id.'">'.$view[FormGuard::FALLBACK_FIELD]->vars['omniguard_html'].'</div>';
+            $view[FormGuard::FALLBACK_FIELD]->vars['omnishield_html'] = '<div data-guard-fallback="'.$id.'">'.$view[FormGuard::FALLBACK_FIELD]->vars['omnishield_html'].'</div>';
         }
 
         $script = <<<'JS'
@@ -213,7 +213,7 @@ class FormTypeGuardExtension extends AbstractTypeExtension
                 if (window.Consent) { start(); } else { document.addEventListener('DOMContentLoaded', start); }
             })(document.currentScript.previousElementSibling);
             JS;
-        $captcha->vars['omniguard_html'] = '<template data-guard-consent="'.htmlspecialchars($id, \ENT_QUOTES).'" data-guard-label="'.htmlspecialchars($label, \ENT_QUOTES).'">'.$captcha->vars['omniguard_html'].'</template><script>'.$script.'</script>';
+        $captcha->vars['omnishield_html'] = '<template data-guard-consent="'.htmlspecialchars($id, \ENT_QUOTES).'" data-guard-label="'.htmlspecialchars($label, \ENT_QUOTES).'">'.$captcha->vars['omnishield_html'].'</template><script>'.$script.'</script>';
     }
 
     /** An action a captcha accepts: letters, digits, underscores. */

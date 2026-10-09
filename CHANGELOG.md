@@ -7,6 +7,9 @@ Versions follow the branch-per-major scheme: branch `3.x` → tags `3.0.0`,
 ## [Unreleased]
 
 ### Changed
+- The forms' guard speaks to `glitchr/omnishield`, the family formerly named `glitchr/omniguard` (renamed on 2026-10-10: the vendor `omniguard` on Packagist belongs to another project): `omnishield/*` in `suggest` and `require-dev`, `Omnishield\` classes, the configuration `omnishield:`, the test token `omnishield-fixed-token`. `FormGuard`, the option `guard` and `base.guard` keep their names.
+
+### Changed
 - License: MIT since 2026-10-09; earlier versions remain published under LGPL-3.0-or-later. `COPYING` and `COPYING.LESSER` removed, `LICENSE` holds the MIT text.
 
 ### Added

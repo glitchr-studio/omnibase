@@ -18,8 +18,8 @@ return [
     Google\GoogleBundle::class => ['all' => true],
     ApiPlatform\Symfony\Bundle\ApiPlatformBundle::class => ['all' => true],
     Symfony\UX\TwigComponent\TwigComponentBundle::class => ['all' => true],
-    // The guard of the forms: captchas, address lists, content classifiers (glitchr/omniguard).
-    Omniguard\Bridge\Symfony\OmniguardBundle::class => ['all' => true],
+    // The guard of the forms: captchas, address lists, content classifiers (glitchr/omnishield).
+    Omnishield\Bridge\Symfony\OmnishieldBundle::class => ['all' => true],
     // Documents signed for any entity: Base\Service\Signatures through glitchr/omnisign.
     Omnisign\Bridge\Symfony\OmnisignBundle::class => ['all' => true],
     Base\BaseBundle::class => ['all' => true],

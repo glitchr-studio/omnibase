@@ -75,7 +75,7 @@ class RegisterAfterLoginHttpTest extends KernelTestCase
     }
 
     /** The sign-up page read, its form filled and sent, as a visitor does - with a new session each time. */
-    private function signUp(string $email, array $more = ['omniguard-token' => 'omniguard-fixed-token']): Response
+    private function signUp(string $email, array $more = ['omnishield-token' => 'omnishield-fixed-token']): Response
     {
         $this->cookies = [];
         $this->browse('/login');
@@ -183,7 +183,7 @@ class RegisterAfterLoginHttpTest extends KernelTestCase
             'agreeTerms' => '1',
             '_csrf_token' => html_entity_decode($token[1] ?? ''),
             'guard_opened' => html_entity_decode($stamp[1] ?? ''),
-        ], 'omniguard-token' => 'omniguard-fixed-token'], '/register');
+        ], 'omnishield-token' => 'omnishield-fixed-token'], '/register');
 
         $this->assertContains($refused->getStatusCode(), [200, 422], $this->said($refused));
         $this->assertStringNotContainsString('signup-account-exists', (string) $refused->getContent());
@@ -195,8 +195,8 @@ class RegisterAfterLoginHttpTest extends KernelTestCase
      */
     public function testTheSignUpIsGuarded(): void
     {
-        if (!class_exists(\Omniguard\Registry::class)) {
-            self::markTestSkipped('glitchr/omniguard is not installed.');
+        if (!class_exists(\Omnishield\Registry::class)) {
+            self::markTestSkipped('glitchr/omnishield is not installed.');
         }
         $translator = static::getContainer()->get('translator');
 

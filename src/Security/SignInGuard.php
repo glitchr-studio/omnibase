@@ -3,9 +3,9 @@
 namespace Base\Security;
 
 use Base\Service\FormGuard;
-use Omniguard\Exception\InvalidKeyException;
-use Omniguard\Exception\ProviderException;
-use Omniguard\Model\Attempt;
+use Omnishield\Exception\InvalidKeyException;
+use Omnishield\Exception\ProviderException;
+use Omnishield\Model\Attempt;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -27,7 +27,7 @@ use Symfony\Component\Security\Http\Event\LoginSuccessEvent;
  * Only the site's own sign-in form (security_login): not the rescue door, not
  * the demonstration's one click. Nothing where glitchr/ux-google's reCAPTCHA
  * already guards the sign-in (google.recaptcha.enable), nor without
- * glitchr/omniguard and a captcha.
+ * glitchr/omnishield and a captcha.
  */
 class SignInGuard implements EventSubscriberInterface
 {

@@ -12,11 +12,11 @@ use Base\Service\ParameterBagInterface;
 use Base\Service\SettingBagInterface;
 use Base\Service\SpamChecker;
 use Base\Service\TranslatorInterface;
-use Omniguard\Akismet\AkismetGatewayFactory;
-use Omniguard\Model\Submission;
-use Omniguard\Registry;
-use Omniguard\Testing\FixedGateway;
-use Omniguard\Testing\FixedGatewayFactory;
+use Omnishield\Akismet\AkismetGatewayFactory;
+use Omnishield\Model\Submission;
+use Omnishield\Registry;
+use Omnishield\Testing\FixedGateway;
+use Omnishield\Testing\FixedGatewayFactory;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -25,7 +25,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
- * SpamChecker on glitchr/omniguard's classifier: a gateway named by
+ * SpamChecker on glitchr/omnishield's classifier: a gateway named by
  * base.guard.classifier, else Akismet with the site's key - what it is told
  * (texts, the site's home page, a date), what its answer becomes (a comment
  * kept aside as SPAM), and what happens when it does not answer.
@@ -35,7 +35,7 @@ class SpamCheckerTest extends TestCase
     protected function setUp(): void
     {
         if (!class_exists(Registry::class) || !class_exists(AkismetGatewayFactory::class)) {
-            self::markTestSkipped('glitchr/omniguard and omniguard/akismet are not installed.');
+            self::markTestSkipped('glitchr/omnishield and omnishield/akismet are not installed.');
         }
     }
 

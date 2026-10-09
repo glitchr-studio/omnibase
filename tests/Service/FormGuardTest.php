@@ -10,24 +10,24 @@ use Base\Form\Extension\FormTypeGuardExtension;
 use Base\Routing\AdvancedRouterInterface;
 use Base\Service\FormGuard;
 use Base\Service\SpamCheckerInterface;
-use Omniguard\Altcha\AltchaGateway;
-use Omniguard\Altcha\AltchaGatewayFactory;
-use Omniguard\Bridge\Symfony\Form\ChallengeType;
-use Omniguard\Bridge\Symfony\Validator\PassesChallenge;
-use Omniguard\Bridge\Symfony\Validator\PassesChallengeValidator;
-use Omniguard\Disposable\DisposableGatewayFactory;
-use Omniguard\Exception\UnreachableException;
-use Omniguard\GatewayFactoryInterface;
-use Omniguard\GatewayInterface;
-use Omniguard\Model\Capabilities;
-use Omniguard\Model\Identity;
-use Omniguard\Model\Reputation;
-use Omniguard\Registry;
-use Omniguard\Replay\InMemoryReplayStore;
-use Omniguard\ReputationInterface;
-use Omniguard\Testing\FixedGateway;
-use Omniguard\Testing\FixedGatewayFactory;
-use Omniguard\WidgetPrinter;
+use Omnishield\Altcha\AltchaGateway;
+use Omnishield\Altcha\AltchaGatewayFactory;
+use Omnishield\Bridge\Symfony\Form\ChallengeType;
+use Omnishield\Bridge\Symfony\Validator\PassesChallenge;
+use Omnishield\Bridge\Symfony\Validator\PassesChallengeValidator;
+use Omnishield\Disposable\DisposableGatewayFactory;
+use Omnishield\Exception\UnreachableException;
+use Omnishield\GatewayFactoryInterface;
+use Omnishield\GatewayInterface;
+use Omnishield\Model\Capabilities;
+use Omnishield\Model\Identity;
+use Omnishield\Model\Reputation;
+use Omnishield\Registry;
+use Omnishield\Replay\InMemoryReplayStore;
+use Omnishield\ReputationInterface;
+use Omnishield\Testing\FixedGateway;
+use Omnishield\Testing\FixedGatewayFactory;
+use Omnishield\WidgetPrinter;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\FormType;
@@ -47,7 +47,7 @@ use Symfony\Component\Validator\Validation;
 /**
  * The option `guard` of a form, as a browser and a robot send it: the trap,
  * the time, the lists, the captcha - in a form factory of its own, on
- * glitchr/omniguard's real pieces (its registry, ALTCHA, the disposable
+ * glitchr/omnishield's real pieces (its registry, ALTCHA, the disposable
  * domains, the fixed gateway, the captcha's field and constraint).
  */
 class FormGuardTest extends TestCase
@@ -61,7 +61,7 @@ class FormGuardTest extends TestCase
     protected function setUp(): void
     {
         if (!class_exists(Registry::class) || !class_exists(AltchaGatewayFactory::class)) {
-            self::markTestSkipped('glitchr/omniguard and omniguard/altcha are not installed.');
+            self::markTestSkipped('glitchr/omnishield and omnishield/altcha are not installed.');
         }
         $this->requests = new RequestStack();
         $this->replays = new InMemoryReplayStore();
@@ -80,9 +80,9 @@ class FormGuardTest extends TestCase
     }
 
     /** @param array<string, mixed> $config base.guard */
-    private function forms(array $config = [], ?string $defaultChallenge = 'forms', bool $omniguard = true): FormFactoryInterface
+    private function forms(array $config = [], ?string $defaultChallenge = 'forms', bool $omnishield = true): FormFactoryInterface
     {
-        $registry = $omniguard ? ($this->registry ?? $this->registry(['forms' => ['factory' => 'fixed']])) : null;
+        $registry = $omnishield ? ($this->registry ?? $this->registry(['forms' => ['factory' => 'fixed']])) : null;
         $guard = new FormGuard(self::SECRET, $config + ['min_delay' => 3], $registry, null, $defaultChallenge);
         $router = $this->createMock(AdvancedRouterInterface::class);
         $router->method('isAdmin')->willReturn(false);
@@ -183,7 +183,7 @@ class FormGuardTest extends TestCase
     {
         $missing = $this->send($this->form($this->forms()));
         $this->assertSame([FormGuard::CHALLENGE_FIELD => [FormGuard::CHALLENGE_MISSING]], $this->errors($missing));
-        $this->assertSame('Please confirm that you are not a robot.', $missing->get(FormGuard::CHALLENGE_FIELD)->getErrors()[0]->getMessage(), 'omniguard\'s sentence, translated in "validators"');
+        $this->assertSame('Please confirm that you are not a robot.', $missing->get(FormGuard::CHALLENGE_FIELD)->getErrors()[0]->getMessage(), 'omnishield\'s sentence, translated in "validators"');
 
         $this->registry(['forms' => ['factory' => 'fixed', 'options' => ['pass' => false]]]);
         $false = $this->send($this->form($this->forms()), post: $this->token());
@@ -260,9 +260,9 @@ class FormGuardTest extends TestCase
 
         // Printed inert, in a <template> omnibase/consent opens (feature CAPTCHA); the fallback beside it.
         $view = $this->form($forms)->createView();
-        $this->assertStringStartsWith('<template data-guard-consent=', $view[FormGuard::CHALLENGE_FIELD]->vars['omniguard_html']);
-        $this->assertStringContainsString("Consent.use('CAPTCHA'", $view[FormGuard::CHALLENGE_FIELD]->vars['omniguard_html']);
-        $this->assertStringContainsString('data-guard-fallback=', $view[FormGuard::FALLBACK_FIELD]->vars['omniguard_html']);
+        $this->assertStringStartsWith('<template data-guard-consent=', $view[FormGuard::CHALLENGE_FIELD]->vars['omnishield_html']);
+        $this->assertStringContainsString("Consent.use('CAPTCHA'", $view[FormGuard::CHALLENGE_FIELD]->vars['omnishield_html']);
+        $this->assertStringContainsString('data-guard-fallback=', $view[FormGuard::FALLBACK_FIELD]->vars['omnishield_html']);
 
         // The visitor who refused solved the fallback: it holds. Nothing solved: refused.
         $this->assertTrue($this->send($this->form($forms), post: $this->token())->isValid(), 'the fallback\'s token');
@@ -271,12 +271,12 @@ class FormGuardTest extends TestCase
 
         // A captcha that reaches nobody is printed as it is.
         $plain = $this->form($this->forms(['challenge' => 'local'], 'local'))->createView();
-        $this->assertStringNotContainsString('<template', $plain[FormGuard::CHALLENGE_FIELD]->vars['omniguard_html']);
+        $this->assertStringNotContainsString('<template', $plain[FormGuard::CHALLENGE_FIELD]->vars['omnishield_html']);
     }
 
-    public function testWithoutOmniguardTheTrapAndTheTimeAlone(): void
+    public function testWithoutOmnishieldTheTrapAndTheTimeAlone(): void
     {
-        $forms = $this->forms(['reputation' => ['emails']], null, omniguard: false);
+        $forms = $this->forms(['reputation' => ['emails']], null, omnishield: false);
 
         $form = $this->send($this->form($forms), ['email' => 'someone@mailinator.com']);
         $this->assertTrue($form->isValid(), json_encode($this->errors($form)));
@@ -331,7 +331,7 @@ final class ThirdPartyFactory implements GatewayFactoryInterface
 
     public function create(array $options = []): GatewayInterface
     {
-        return new class implements \Omniguard\ChallengeInterface {
+        return new class implements \Omnishield\ChallengeInterface {
             public function getName(): string
             {
                 return 'third';
@@ -347,14 +347,14 @@ final class ThirdPartyFactory implements GatewayFactoryInterface
                 return new Capabilities(challenge: true, thirdParty: true);
             }
 
-            public function widget(?string $action = null): \Omniguard\Model\Widget
+            public function widget(?string $action = null): \Omnishield\Model\Widget
             {
-                return new \Omniguard\Model\Widget('third-token', tag: 'div', attributes: ['class' => 'third'], action: $action, thirdParty: true, origins: ['https://challenges.example']);
+                return new \Omnishield\Model\Widget('third-token', tag: 'div', attributes: ['class' => 'third'], action: $action, thirdParty: true, origins: ['https://challenges.example']);
             }
 
-            public function verify(\Omniguard\Model\Attempt $attempt): \Omniguard\Model\Verdict
+            public function verify(\Omnishield\Model\Attempt $attempt): \Omnishield\Model\Verdict
             {
-                return $attempt->isEmpty() ? \Omniguard\Model\Verdict::fail(\Omniguard\Model\Verdict::MISSING) : new \Omniguard\Model\Verdict(true, 1.0, $attempt->action, null, new \DateTimeImmutable());
+                return $attempt->isEmpty() ? \Omnishield\Model\Verdict::fail(\Omnishield\Model\Verdict::MISSING) : new \Omnishield\Model\Verdict(true, 1.0, $attempt->action, null, new \DateTimeImmutable());
             }
         };
     }
@@ -370,7 +370,7 @@ final class DownFactory implements GatewayFactoryInterface
 
     public function create(array $options = []): GatewayInterface
     {
-        return new class implements ReputationInterface, \Omniguard\ClassifierInterface {
+        return new class implements ReputationInterface, \Omnishield\ClassifierInterface {
             public function getName(): string
             {
                 return 'down';
@@ -391,12 +391,12 @@ final class DownFactory implements GatewayFactoryInterface
                 throw new UnreachableException('down', 'No answer.');
             }
 
-            public function classify(\Omniguard\Model\Submission $submission): \Omniguard\Model\Classification
+            public function classify(\Omnishield\Model\Submission $submission): \Omnishield\Model\Classification
             {
                 throw new UnreachableException('down', 'No answer.');
             }
 
-            public function report(\Omniguard\Model\Submission $submission, bool $spam): void
+            public function report(\Omnishield\Model\Submission $submission, bool $spam): void
             {
                 throw new UnreachableException('down', 'No answer.');
             }

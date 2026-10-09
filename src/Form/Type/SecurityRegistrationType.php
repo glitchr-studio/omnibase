@@ -26,7 +26,7 @@ class SecurityRegistrationType extends AbstractType
         $resolver->setDefaults([
             'data_class' => SecurityRegistrationModel::class,
             // The forms' guard (Base\Service\FormGuard): a trap, the time, the lists - a disposable
-            // e-mail is refused on its field - and the captcha when glitchr/omniguard has one.
+            // e-mail is refused on its field - and the captcha when glitchr/omnishield has one.
             'guard' => ['action' => 'signup'],
         ]);
     }

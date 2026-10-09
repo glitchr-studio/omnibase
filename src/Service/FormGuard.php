@@ -3,10 +3,10 @@
 namespace Base\Service;
 
 use Base\Repository\Thread\CommentRepository;
-use Omniguard\Exception\InvalidKeyException;
-use Omniguard\Exception\ProviderException;
-use Omniguard\Model\Identity;
-use Omniguard\Registry;
+use Omnishield\Exception\InvalidKeyException;
+use Omnishield\Exception\ProviderException;
+use Omnishield\Model\Identity;
+use Omnishield\Registry;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Form\FormInterface;
@@ -22,12 +22,12 @@ use Symfony\Component\HttpFoundation\Request;
  *   3. the lists - whoever sends it (address, e-mail, name) asked of the
  *      gateways of base.guard.reputation: disposable e-mail domains,
  *      StopForumSpam;
- *   4. the captcha - a field of glitchr/omniguard (ChallengeType) on the
+ *   4. the captcha - a field of glitchr/omnishield (ChallengeType) on the
  *      gateway of base.guard.challenge, checked by its own constraint;
  *   5. what was written - the classifier behind SpamChecker (Akismet), for
  *      the data that implement SpamProtectionInterface.
  *
- * Without glitchr/omniguard, or without a gateway, the trap and the time
+ * Without glitchr/omnishield, or without a gateway, the trap and the time
  * alone. The option `guard` of a form asks for it
  * (Base\Form\Extension\FormTypeGuardExtension); CommentGuard is the comment
  * forms' face of it, with their flood interval.
@@ -52,7 +52,7 @@ class FormGuard
     public const CHALLENGE_FAILED = 'challenge_failed';
     public const CHALLENGE_UNREACHABLE = 'challenge_unreachable';
 
-    /** What they say: glitchr/omniguard's own sentences (PassesChallenge), translated in the "validators" domain. */
+    /** What they say: glitchr/omnishield's own sentences (PassesChallenge), translated in the "validators" domain. */
     public const CHALLENGE_MESSAGES = [
         self::CHALLENGE_MISSING => 'Please confirm that you are not a robot.',
         self::CHALLENGE_FAILED => 'The check that you are not a robot did not pass. Please try again.',
@@ -68,7 +68,7 @@ class FormGuard
 
     /**
      * @param array{challenge?: string|bool|null, fallback?: ?string, reputation?: list<string>, classifier?: ?string, unreachable?: string, min_delay?: int, sign_in_after?: int} $config base.guard
-     * @param string|null $defaultChallenge omniguard.challenge.gateway, when glitchr/omniguard is installed (GuardPass)
+     * @param string|null $defaultChallenge omnishield.challenge.gateway, when glitchr/omnishield is installed (GuardPass)
      */
     public function __construct(
         #[Autowire('%kernel.secret%')] #[\SensitiveParameter] protected readonly string $secret,
@@ -81,8 +81,8 @@ class FormGuard
     ) {
     }
 
-    /** Whether glitchr/omniguard is here, with its gateways. */
-    public function hasOmniguard(): bool
+    /** Whether glitchr/omnishield is here, with its gateways. */
+    public function hasOmnishield(): bool
     {
         return null !== $this->registry;
     }
@@ -104,8 +104,8 @@ class FormGuard
     }
 
     /**
-     * The captcha's gateway: base.guard.challenge, else omniguard's default -
-     * null when there is none, or when omniguard's form field is missing.
+     * The captcha's gateway: base.guard.challenge, else omnishield's default -
+     * null when there is none, or when omnishield's form field is missing.
      */
     public function challengeGateway(): ?string
     {
@@ -115,7 +115,7 @@ class FormGuard
         }
         $name ??= $this->defaultChallenge;
 
-        return null !== $name && $this->registry?->has((string) $name) && class_exists(\Omniguard\Bridge\Symfony\Form\ChallengeType::class) ? (string) $name : null;
+        return null !== $name && $this->registry?->has((string) $name) && class_exists(\Omnishield\Bridge\Symfony\Form\ChallengeType::class) ? (string) $name : null;
     }
 
     /** The captcha shown to a visitor who refused the third party the default one reaches. */
@@ -126,7 +126,7 @@ class FormGuard
         return \is_string($name) && '' !== $name && $this->registry?->has($name) ? $name : null;
     }
 
-    /** @return list<string> the lists asked about whoever submits, those configured in omniguard */
+    /** @return list<string> the lists asked about whoever submits, those configured in omnishield */
     public function reputationGateways(): array
     {
         return array_values(array_filter((array) ($this->config['reputation'] ?? []), fn ($name) => \is_string($name) && $this->registry?->has($name)));
@@ -186,7 +186,7 @@ class FormGuard
             }
         }
 
-        // No list to ask - none configured, or glitchr/omniguard (suggested, not required) not installed:
+        // No list to ask - none configured, or glitchr/omnishield (suggested, not required) not installed:
         // the trap and the time alone. Its Identity is not even built then: without the family the class
         // does not exist, and the first guarded form sent answered 500.
         if (!$lists || [] === $this->reputationGateways()) {
@@ -235,7 +235,7 @@ class FormGuard
      * The captcha's token, asked of its gateway - once, after the trap, the
      * time and the lists: a robot they caught spends nothing at the provider.
      * Null when it holds; otherwise one of CHALLENGE_*. A provider that does
-     * not answer follows omniguard.challenge.unreachable; a key refused is
+     * not answer follows omnishield.challenge.unreachable; a key refused is
      * the site's error, let through and logged.
      */
     public function challenge(string $gateway, ?string $token, ?Request $request, ?string $action = null): ?string
@@ -245,7 +245,7 @@ class FormGuard
             return self::CHALLENGE_MISSING;
         }
         try {
-            $verdict = $this->registry->challenge($gateway)->verify(new \Omniguard\Model\Attempt($token, $request?->getClientIp(), $action));
+            $verdict = $this->registry->challenge($gateway)->verify(new \Omnishield\Model\Attempt($token, $request?->getClientIp(), $action));
         } catch (InvalidKeyException $e) {
             $this->logger?->error('Form guard: the captcha "{gateway}" refused the site\'s key: {message}', ['gateway' => $gateway, 'message' => $e->getMessage()]);
 
@@ -259,7 +259,7 @@ class FormGuard
             return null;
         }
 
-        return $verdict->failedFor(\Omniguard\Model\Verdict::MISSING) ? self::CHALLENGE_MISSING : self::CHALLENGE_FAILED;
+        return $verdict->failedFor(\Omnishield\Model\Verdict::MISSING) ? self::CHALLENGE_MISSING : self::CHALLENGE_FAILED;
     }
 
     /**

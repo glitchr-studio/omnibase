@@ -6,9 +6,9 @@ use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
 /**
- * Base\Service\FormGuard's default captcha is glitchr/omniguard's
- * (omniguard.challenge.gateway) - a parameter that exists only when
- * omniguard's bundle is registered: read here, once every extension has
+ * Base\Service\FormGuard's default captcha is glitchr/omnishield's
+ * (omnishield.challenge.gateway) - a parameter that exists only when
+ * omnishield's bundle is registered: read here, once every extension has
  * loaded, rather than named in the service's definition. So is
  * glitchr/ux-google's switch, for the sign-in's captcha (SignInGuard).
  */
@@ -19,11 +19,11 @@ final class GuardPass implements CompilerPassInterface
         if (!$container->hasDefinition('Base\Service\FormGuard')) {
             return;
         }
-        $default = $container->hasParameter('omniguard.challenge.gateway') ? $container->getParameter('omniguard.challenge.gateway') : null;
+        $default = $container->hasParameter('omnishield.challenge.gateway') ? $container->getParameter('omnishield.challenge.gateway') : null;
         $container->getDefinition('Base\Service\FormGuard')->setArgument('$defaultChallenge', \is_string($default) ? $default : null);
 
-        // omniguard.challenge.unreachable, as omniguard gives it to its own constraint's validator.
-        $validator = 'Omniguard\Bridge\Symfony\Validator\PassesChallengeValidator';
+        // omnishield.challenge.unreachable, as omnishield gives it to its own constraint's validator.
+        $validator = 'Omnishield\Bridge\Symfony\Validator\PassesChallengeValidator';
         if ($container->hasDefinition($validator) && \count($container->getDefinition($validator)->getArguments()) > 3) {
             $container->getDefinition('Base\Service\FormGuard')->setArgument('$acceptUnreachableChallenge', (bool) $container->getDefinition($validator)->getArgument(3));
         }

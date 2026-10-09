@@ -5,9 +5,9 @@ namespace Tests\Base\Security;
 use Base\Security\LoginFormAuthenticator;
 use Base\Security\SignInGuard;
 use Base\Service\FormGuard;
-use Omniguard\Registry;
-use Omniguard\Testing\FixedGateway;
-use Omniguard\Testing\FixedGatewayFactory;
+use Omnishield\Registry;
+use Omnishield\Testing\FixedGateway;
+use Omnishield\Testing\FixedGatewayFactory;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpFoundation\Request;
@@ -34,7 +34,7 @@ class SignInGuardTest extends TestCase
     protected function setUp(): void
     {
         if (!class_exists(Registry::class)) {
-            self::markTestSkipped('glitchr/omniguard is not installed.');
+            self::markTestSkipped('glitchr/omnishield is not installed.');
         }
         $this->requests = new RequestStack();
         $this->cache = new ArrayAdapter();

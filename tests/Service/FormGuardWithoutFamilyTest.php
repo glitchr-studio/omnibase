@@ -20,17 +20,17 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Validator\Validation;
 
 /**
- * glitchr/omniguard is suggested, not required: on a site without the family,
+ * glitchr/omnishield is suggested, not required: on a site without the family,
  * a guarded form keeps its trap and its time and asks nothing else - no list,
  * no captcha -, whatever base.guard says (here reputation: [emails], the
  * configuration a site copies), and never answers 500.
  *
  * FormGuardTest runs with the family installed (require-dev), so it cannot
  * see a class of the family used where it is missing. Here each test runs in
- * a process of its own whose autoloader refuses the Omniguard\ namespace: the
+ * a process of its own whose autoloader refuses the Omnishield\ namespace: the
  * family is not there, as on such a site. (A form sent with an address once
- * built omniguard's Identity to ask the lists - "Class
- * Omniguard\Model\Identity not found", on the first contact form sent.)
+ * built omnishield's Identity to ask the lists - "Class
+ * Omnishield\Model\Identity not found", on the first contact form sent.)
  *
  * The annotations for PHPUnit 9.6 (the harness's), the attributes for 10.
  *
@@ -52,20 +52,20 @@ final class FormGuardWithoutFamilyTest extends TestCase
     {
         // Only in a process of its own: where a class of the family is loaded already, it cannot be taken away,
         // and the loaders are not to be changed under the other tests.
-        if (class_exists(\Omniguard\Registry::class, false) || class_exists(\Omniguard\Model\Identity::class, false)) {
-            self::markTestSkipped('Not in a process of its own: glitchr/omniguard is loaded already.');
+        if (class_exists(\Omnishield\Registry::class, false) || class_exists(\Omnishield\Model\Identity::class, false)) {
+            self::markTestSkipped('Not in a process of its own: glitchr/omnishield is loaded already.');
         }
         // The family removed from the autoload: every loader asked for one of its classes answers nothing.
         $this->loaders = spl_autoload_functions();
         foreach ($this->loaders as $loader) {
             spl_autoload_unregister($loader);
             spl_autoload_register(static function (string $class) use ($loader): void {
-                if (!str_starts_with($class, 'Omniguard\\')) {
+                if (!str_starts_with($class, 'Omnishield\\')) {
                     $loader($class);
                 }
             });
         }
-        $this->assertFalse(class_exists(\Omniguard\Model\Identity::class), 'the family is not there');
+        $this->assertFalse(class_exists(\Omnishield\Model\Identity::class), 'the family is not there');
         $this->requests = new RequestStack();
     }
 
@@ -121,7 +121,7 @@ final class FormGuardWithoutFamilyTest extends TestCase
     public function testAFormSentAsAPersonIsAcceptedWithNoListAsked(): void
     {
         $guard = new FormGuard(self::SECRET, ['reputation' => ['emails']]);
-        $this->assertFalse($guard->hasOmniguard());
+        $this->assertFalse($guard->hasOmnishield());
         $this->assertSame([], $guard->reputationGateways());
         $this->assertNull($guard->challengeGateway());
 

@@ -40,7 +40,7 @@ widget_slot:
 privacy:
    consent_required: "Please agree that your information is used to answer you."
 
-# glitchr/omniguard's captcha (PassesChallenge): its messages are these sentences, kept as they are.
+# glitchr/omnishield's captcha (PassesChallenge): its messages are these sentences, kept as they are.
 "Please confirm that you are not a robot.": "Please confirm that you are not a robot."
 "The check that you are not a robot did not pass. Please try again.": "The check that you are not a robot did not pass. Please try again."
 "The check that you are not a robot could not be done just now. Please try again in a moment.": "The check that you are not a robot could not be done just now. Please try again in a moment."
