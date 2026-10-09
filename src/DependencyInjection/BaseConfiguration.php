@@ -137,10 +137,9 @@ class BaseConfiguration extends AbstractBaseConfiguration
                     ->end()
 
                     ->arrayNode('route_exceptions')
-                        ->addDefaultChildrenIfNoneSet()
-                            ->prototype('scalar')
-                            ->defaultValue('@localhost$')
-                        ->end()
+                        ->info('Routes (regular expressions on their names) no access restriction stops, and the referrer never remembers: the sign-in pages, the language switch, the UX endpoints.')
+                        ->prototype('scalar')->end()
+                        ->defaultValue(['/^(?:locale_|ux_|user_|security_)/'])
                     ->end()
 
                     ->arrayNode('exceptions')

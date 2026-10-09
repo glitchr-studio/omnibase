@@ -272,7 +272,7 @@ class SecuritySubscriber implements EventSubscriberInterface
         }
 
         // Notify user about the authentication method
-        $exceptions = $this->parameterBag->get("base.access_restrictions.route_exceptions") ?? [];
+        $exceptions = $this->parameterBag->get("base.access_restriction.route_exceptions") ?? [];
         $exceptions = array_merge($exceptions, ["/^(security|user|ux)_(?:.*)$/"]);
         if ($token instanceof SwitchUserToken) {
             $switchParameter = $this->router->getRouteFirewall()->getSwitchUser()["parameter"] ?? "_switch_user";
