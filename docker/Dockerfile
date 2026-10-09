@@ -55,8 +55,8 @@ ARG PLUGINS="omnibase/admin omnibase/marketplace omnibase/forge omnibase/forum o
 # --no-scripts: Flex recipes and cache:clear would compile the container
 # against recipe defaults BEFORE the demo config overlay below exists. The
 # overlay ships every config file the demo needs; the container is compiled
-# at first run instead. symfony/translation is required by the bundle's
-# Translator without being declared by it.
+# at first run instead. (symfony/translation, which the bundle's Translator
+# needs, is one of its requirements since 2026-10-09.)
 # The shop pays through glitchr/omnitrade (its Stripe provider here) and
 # ships through glitchr/omnibus (two carriers here): the sibling families,
 # from Packagist, their development branches - the marketplace follows
