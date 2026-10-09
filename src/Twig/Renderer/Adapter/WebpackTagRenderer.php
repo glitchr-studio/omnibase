@@ -617,6 +617,38 @@ class WebpackTagRenderer extends AbstractTagRenderer implements AbstractLocalCac
         return implode(PHP_EOL, $renderedScriptTags);
     }
 
+    /**
+     * How a script file is loaded: `defer` for a file named `-defer`, `async`
+     * for one named `-async`, the defaults (base.twig.script_attributes) for
+     * the others.
+     *
+     * Unless the defaults say `ordered: false`, a file named `-async` is
+     * loaded `defer` too: deferred scripts run in the order of the page, async
+     * ones whenever they arrive. The core's `base-async` entry is what sets
+     * `window.jQuery`, and a site's entries read it as an external
+     * (`addExternals({ jquery: 'jQuery' })`, its own `app-async` included):
+     * left async, nothing made the core's run first, and the site's threw
+     * "jQuery is not defined" when its file came back sooner. The page renders
+     * `base` before the site's entries, so in order the global is always there.
+     *
+     * @param array{defer?: bool, async?: bool, ordered?: bool} $defaults
+     *
+     * @return array{defer: bool, async: bool}
+     */
+    public static function scriptAttributes(string $file, array $defaults = []): array
+    {
+        $isAsync = str_contains($file, '-async');
+        $isDefer = str_contains($file, '-defer');
+        $async = $isAsync || (!$isDefer && (bool) ($defaults['async'] ?? false));
+        $defer = $isDefer || (!$isAsync && (bool) ($defaults['defer'] ?? false));
+
+        if ($async && ($defaults['ordered'] ?? true)) {
+            return ['defer' => true, 'async' => false];
+        }
+
+        return ['defer' => $defer, 'async' => $async];
+    }
+
     public function renderScriptTags(null|string|array $entryName = null, ?string $packageName = null, ?string $entrypointName = null, array $htmlAttributes = []): string
     {
         if (null == $this->entrypointLookupCollection) {
@@ -664,11 +696,7 @@ class WebpackTagRenderer extends AbstractTagRenderer implements AbstractLocalCac
                 continue;
             }
 
-            $tags = array_filter(array_map(fn($e) => [
-                'value' => $e,
-                'defer' => str_contains($e, '-defer') || (!str_contains($e, '-async') && $this->defaultScriptAttributes['defer']),
-                'async' => str_contains($e, '-async') || (!str_contains($e, '-defer') && $this->defaultScriptAttributes['async']),
-            ], $files));
+            $tags = array_filter(array_map(fn($e) => ['value' => $e] + self::scriptAttributes($e, $this->defaultScriptAttributes), $files));
 
             $this->removeScriptTag($entryName);
 
