@@ -198,6 +198,71 @@ class WebpackTagRenderer extends AbstractTagRenderer implements AbstractLocalCac
         return $this->entrypoints;
     }
 
+    /**
+     * Reads the entries of the application's build (its entrypoints.json) and of the core's
+     * (public/bundles/base/entrypoints.json), the breakpoints and the alternatives (-async, -defer).
+     *
+     * @return bool whether both builds were there with entries: a build being written (Encore's
+     *              watcher empties its output first) is not complete, and what was read of it is
+     *              never kept beyond the request (see WebpackCacheWarmer::doWarmUp())
+     */
+    public function discoverEntrypoints(?string $appJsonPath, array $breakpoints = []): bool
+    {
+        $complete = true;
+        foreach (['_default' => $appJsonPath, '_base' => rtrim($this->publicDir, '/') . '/bundles/base/entrypoints.json'] as $name => $path) {
+            $entrypoints = null;
+            if ($path && is_file($path)) {
+                $json = json_decode((string) @file_get_contents($path), true);
+                $entrypoints = \is_array($json['entrypoints'] ?? null) ? $json['entrypoints'] : null;
+            }
+            if (!$entrypoints) {
+                $complete = false;
+                continue;
+            }
+
+            $this->addEntrypoint($name, $path);
+            $tags = array_unique(array_map(fn($t) => str_rstrip($t, ['-async', '-defer']), array_keys($entrypoints)));
+            foreach ($tags as $tag) {
+                '_base' === $name ? $this->addTag($tag, '_base') : $this->addTag($tag);
+                if (str_contains($tag, '.')) {
+                    $this->markAsOptional($tag);
+                }
+            }
+        }
+
+        foreach ($breakpoints as $breakpoint) {
+            $this->addBreakpoint($breakpoint['name'], $breakpoint['media'] ?? 'all');
+        }
+        $this->addAlternative('async');
+        $this->addAlternative('defer');
+
+        return $complete;
+    }
+
+    private bool $discovered = false;
+
+    /**
+     * No entry known - the cache was made while a build was being written, and kept none:
+     * read them now, for this request (a page then has its stylesheets as soon as the build
+     * is done, without a cache:clear).
+     */
+    protected function discoverIfNone(): void
+    {
+        if ($this->discovered || [] !== $this->entrypoints || null === $this->entrypointLookupCollection) {
+            return;
+        }
+        $this->discovered = true;
+
+        try {
+            $lookup = $this->entrypointLookupCollection->getEntrypointLookup('_default');
+            $appJsonPath = first(array_filter((array) $lookup, fn($k) => str_ends_with($k, 'entrypointJsonPath'), ARRAY_FILTER_USE_KEY)) ?: null;
+        } catch (\Throwable) {
+            $appJsonPath = null;    // no build of the application's: the core's alone
+        }
+
+        $this->discoverEntrypoints(\is_string($appJsonPath) ? $appJsonPath : null, $this->parameterBag->get('base.twig.breakpoints') ?? []);
+    }
+
     public function getEntry(string $entrypointName): ?EntrypointLookupInterface
     {
         return $this->entrypoints[$entrypointName] ?? null;
@@ -461,6 +526,8 @@ class WebpackTagRenderer extends AbstractTagRenderer implements AbstractLocalCac
 
     public function renderCssSource(string|array $entryName, ?string $packageName = null, ?string $entrypointName = null, ?string $htmlAttributes = null): string
     {
+        $this->discoverIfNone();
+
         $entryName = is_array($entryName) ? $value['value'] ?? null : $entryName;
         if (!$entryName) {
             return '';
@@ -514,6 +581,8 @@ class WebpackTagRenderer extends AbstractTagRenderer implements AbstractLocalCac
 
     public function renderLinkTags(null|string|array $entryName = null, ?string $packageName = null, ?string $entrypointName = null, array $htmlAttributes = []): string
     {
+        $this->discoverIfNone();
+
         if (null == $this->entrypointLookupCollection) {
             return '';
         }
@@ -651,6 +720,8 @@ class WebpackTagRenderer extends AbstractTagRenderer implements AbstractLocalCac
 
     public function renderScriptTags(null|string|array $entryName = null, ?string $packageName = null, ?string $entrypointName = null, array $htmlAttributes = []): string
     {
+        $this->discoverIfNone();
+
         if (null == $this->entrypointLookupCollection) {
             return '';
         }
