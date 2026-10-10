@@ -19,7 +19,10 @@ class Translator implements TranslatorInterface
     public const DOMAIN_ENTITY = "entities";
     public const DOMAIN_ENUM = "enums";
 
-    public const STRUCTURE_DOT = "^[@a-zA-Z0-9_.]+[.]{1}[a-zA-Z0-9_]+$";
+    // A dotted key, its @domain first when it has one: segments of letters, digits and
+    // underscores, a hyphen within one (registers.national-archives-uk.name) - never at
+    // its edges, never an @ further on (an e-mail address is no key).
+    public const STRUCTURE_DOT = "^@?[a-zA-Z0-9_]+(?:-[a-zA-Z0-9_]+)*(?:[.][a-zA-Z0-9_]+(?:-[a-zA-Z0-9_]+)*)+$";
     public const STRUCTURE_DOTBRACKET = "\{[ ]*[@a-zA-Z0-9_.]+[.]{0,1}[a-zA-Z0-9_]+[ ]*\}";
     public const STRUCTURE_BRACKETLIST = ['{}', "[]", "%%"];
 

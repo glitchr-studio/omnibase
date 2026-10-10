@@ -98,6 +98,10 @@ class TranslatorTest extends TestCase
         $symfony->addResource('array', [
             'quadrant.north' => 'North',
         ], 'en', 'enums');
+        $symfony->addResource('array', [
+            'registers.national-archives-uk.name' => 'The National Archives',
+            'sign-in.forgotten-password' => 'Forgotten password',
+        ], 'en', 'messages');
 
         $kernel = $this->createMock(KernelInterface::class);
         $kernel->method('isDebug')->willReturn($isDebug);
@@ -150,6 +154,25 @@ class TranslatorTest extends TestCase
     public function testTransResolvesAnAtDomainTag(): void
     {
         $this->assertSame('A Widget', $this->makeTranslator()->trans('@entities.widget.title'));
+    }
+
+    /**
+     * A key whose segments hold hyphens (a register named national-archives-uk): its
+     * @domain is read like any other, where the id was printed as it was. What is no
+     * key stays as it is: a sentence that starts with @, an e-mail address, a key
+     * whose segment starts or ends with a hyphen.
+     */
+    public function testAnAtDomainKeyWithHyphensIsTranslated(): void
+    {
+        $translator = $this->makeTranslator();
+        $this->assertSame('The National Archives', $translator->trans('@messages.registers.national-archives-uk.name'));
+        $this->assertSame('Forgotten password', $translator->trans('@messages.sign-in.forgotten-password'));
+        $this->assertSame('The National Archives', $translator->trans('registers.national-archives-uk.name'));
+
+        $this->assertSame('@everyone, the archives are open.', $translator->trans('@everyone, the archives are open.'));
+        $this->assertSame('jean-pierre@example.org', $translator->trans('jean-pierre@example.org'));
+        $this->assertSame('@messages.registers.-uk.name', $translator->trans('@messages.registers.-uk.name'));
+        $this->assertSame('A Widget', $translator->trans('@entities.widget.title'), 'a key without hyphens, as before');
     }
 
     public function testTransSubstitutesBracketedParameters(): void
