@@ -7,6 +7,7 @@ use Omnishield\Exception\InvalidKeyException;
 use Omnishield\Exception\ProviderException;
 use Omnishield\Model\Identity;
 use Omnishield\Registry;
+use Psr\Cache\CacheItemPoolInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Form\FormInterface;
@@ -23,7 +24,10 @@ use Symfony\Component\HttpFoundation\Request;
  *      gateways of base.guard.reputation: disposable e-mail domains,
  *      StopForumSpam;
  *   4. the captcha - a field of glitchr/omnishield (ChallengeType) on the
- *      gateway of base.guard.challenge, checked by its own constraint;
+ *      gateway of base.guard.challenge, checked by the guard - shown and asked
+ *      only from base.guard.captcha_after refused tries of this form from
+ *      this visitor (counted in cache.app for 15 minutes, forgotten after a
+ *      form sent);
  *   5. what was written - the classifier behind SpamChecker (Akismet), for
  *      the data that implement SpamProtectionInterface.
  *
@@ -66,9 +70,13 @@ class FormGuard
     /** The captcha that reaches nobody, shown while the visitor has not agreed to the one that does. */
     public const FALLBACK_FIELD = 'guard_captcha_fallback';
 
+    /** Seconds a refused try of a form is remembered (base.guard.captcha_after). */
+    public const ATTEMPT_WINDOW = 900;
+
     /**
-     * @param array{challenge?: string|bool|null, fallback?: ?string, reputation?: list<string>, classifier?: ?string, unreachable?: string, min_delay?: int, sign_in_after?: int} $config base.guard
+     * @param array{challenge?: string|bool|null, fallback?: ?string, reputation?: list<string>, classifier?: ?string, unreachable?: string, min_delay?: int, sign_in_after?: int, captcha_after?: int} $config base.guard
      * @param string|null $defaultChallenge omnishield.challenge.gateway, when glitchr/omnishield is installed (GuardPass)
+     * @param CacheItemPoolInterface|null $cache where a form's refused tries are counted; without it, the captcha is always asked
      */
     public function __construct(
         #[Autowire('%kernel.secret%')] #[\SensitiveParameter] protected readonly string $secret,
@@ -78,6 +86,7 @@ class FormGuard
         protected readonly ?string $defaultChallenge = null,
         protected readonly ?LoggerInterface $logger = null,
         protected readonly bool $acceptUnreachableChallenge = false,
+        protected readonly ?CacheItemPoolInterface $cache = null,
     ) {
     }
 
@@ -101,6 +110,70 @@ class FormGuard
     public function signInAfter(): int
     {
         return (int) ($this->config['sign_in_after'] ?? 3);
+    }
+
+    /** Refused tries of a guarded form, from a visitor, before its captcha is shown and asked. 0: always. */
+    public function captchaAfter(): int
+    {
+        return max(0, (int) ($this->config['captcha_after'] ?? 3));
+    }
+
+    /**
+     * Whether the captcha of the form $form is shown and asked of this
+     * visitor: always when $after is 0, or when their tries cannot be counted
+     * (no cache, no address, no session); otherwise from $after tries refused.
+     */
+    public function captchaAsked(string $form, int $after, ?Request $request): bool
+    {
+        if ($after <= 0) {
+            return true;
+        }
+        $failures = $this->failures($form, $request);
+
+        return null === $failures || $failures >= $after;
+    }
+
+    /** The refused tries of the form $form from this visitor in the last 15 minutes; null when they cannot be counted. */
+    public function failures(string $form, ?Request $request): ?int
+    {
+        if (null === $key = $this->attemptKey($form, $request)) {
+            return null;
+        }
+        $item = $this->cache->getItem($key);
+
+        return $item->isHit() ? (int) $item->get() : 0;
+    }
+
+    /** One more refused try: the guard said no (trap, time, lists, captcha, spam), or the form is invalid. */
+    public function failed(string $form, ?Request $request): void
+    {
+        if (null === $key = $this->attemptKey($form, $request)) {
+            return;
+        }
+        $item = $this->cache->getItem($key);
+        $this->cache->save($item->set(($item->isHit() ? (int) $item->get() : 0) + 1)->expiresAfter(self::ATTEMPT_WINDOW));
+    }
+
+    /** A form sent: its tries are forgotten. */
+    public function succeeded(string $form, ?Request $request): void
+    {
+        if (null !== $key = $this->attemptKey($form, $request)) {
+            $this->cache->deleteItem($key);
+        }
+    }
+
+    /** Who tries: the address, else the session already started; null when neither, or without a cache. */
+    protected function attemptKey(string $form, ?Request $request): ?string
+    {
+        if (null === $this->cache || null === $request) {
+            return null;
+        }
+        $who = $request->getClientIp();
+        if (null === $who && $request->hasSession() && $request->getSession()->isStarted()) {
+            $who = 'session:'.$request->getSession()->getId();
+        }
+
+        return null === $who || '' === $who ? null : 'base.form_failures.'.hash('sha256', $form.'|'.$who);
     }
 
     /**

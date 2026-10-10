@@ -30,8 +30,11 @@ use Symfony\Contracts\Translation\TranslatorInterface;
  * It adds a trap (guard_website), the stamp of the time the form was shown
  * (guard_opened) and - with glitchr/omnishield and a captcha configured - the
  * captcha (guard_captcha); after the submission it refuses a trap filled, a
- * form sent too fast, a sender the lists know. The captcha is checked by its
- * own constraint, on its field.
+ * form sent too fast, a sender the lists know. The captcha is checked by the
+ * guard, on its field - shown and asked only once the visitor's tries of this
+ * form were refused `captcha_after` times (base.guard.captcha_after, 3; 0:
+ * always): a refusal of the guard or an invalid form counts one, a form sent
+ * forgets them (FormGuard::failed(), succeeded()).
  *
  * Where glitchr/ux-google already guards the form (its option
  * captcha_protection: google.recaptcha.enable), no second captcha is added:
@@ -80,9 +83,10 @@ class FormTypeGuardExtension extends AbstractTypeExtension
                 'reputation' => true,     // ask the lists of base.guard.reputation
                 'email' => 'email',       // the field (or the data's property) holding the sender's e-mail
                 'name' => 'name',         // the one holding their name
+                'captcha_after' => null,  // refused tries before the captcha shows; null: base.guard.captcha_after; 0: always
             ];
         });
-        $resolver->setInfo('guard', 'Guard this form: a trap, the time it takes, the lists, the captcha (Base\Service\FormGuard). true, or an array: trap, min_delay, challenge, action, reputation, email, name.');
+        $resolver->setInfo('guard', 'Guard this form: a trap, the time it takes, the lists, the captcha (Base\Service\FormGuard). true, or an array: trap, min_delay, challenge, action, reputation, email, name, captcha_after.');
         $resolver->setInfo('spam_protection', 'Score the data (SpamProtectionInterface) with the classifier behind SpamChecker, and refuse blatant spam.');
     }
 
@@ -136,6 +140,9 @@ class FormTypeGuardExtension extends AbstractTypeExtension
                 'action' => $action,
                 'constraints' => [],
             ]);
+            // The field is always there (a form refused may show it when it is printed again); it is
+            // printed and asked only from `captcha_after` refused tries (finishView, below).
+            $builder->setAttribute('guard_captcha_after', max(0, (int) ($guard['captcha_after'] ?? $this->guard->captchaAfter())));
 
             // A captcha that reaches a third party (Turnstile, reCAPTCHA, a script from a CDN) waits for
             // the visitor's consent (omnibase/consent's feature CAPTCHA); beside it, the fallback that
@@ -157,7 +164,7 @@ class FormTypeGuardExtension extends AbstractTypeExtension
             $form = $event->getForm();
             $request = $this->requests?->getCurrentRequest();
             $found = $this->guard->inspect($form, $request, $guard['min_delay'], (string) $guard['email'], (string) $guard['name'], (bool) $guard['reputation']);
-            if (null === $found && $form->has(FormGuard::CHALLENGE_FIELD)) {
+            if (null === $found && $form->has(FormGuard::CHALLENGE_FIELD) && $this->captchaAsked($form, $request)) {
                 $field = $form->get(FormGuard::CHALLENGE_FIELD);
                 // The visitor who refused the third party solved the fallback: that one is asked.
                 if ('' === trim((string) $field->getData()) && $form->has(FormGuard::FALLBACK_FIELD) && '' !== trim((string) $form->get(FormGuard::FALLBACK_FIELD)->getData())) {
@@ -177,6 +184,32 @@ class FormTypeGuardExtension extends AbstractTypeExtension
             $target = null !== $field && $form->has($field) ? $form->get($field) : $form;
             $target->addError(new FormError($this->message($reason), null, [], null, $reason));
         }, 10);
+
+        // Once everything has spoken - the guard, the validation (0), the classifier (-10): a form
+        // refused is one more try of this visitor, a form sent forgets them.
+        $builder->addEventListener(FormEvents::POST_SUBMIT, function (FormEvent $event): void {
+            $form = $event->getForm();
+            if (!$form->has(FormGuard::CHALLENGE_FIELD) || 0 === $this->captchaAfter($form)) {
+                return;
+            }
+            $request = $this->requests?->getCurrentRequest();
+            if (\count($form->getErrors(true)) > 0) {
+                $this->guard->failed($form->getName(), $request);
+            } else {
+                $this->guard->succeeded($form->getName(), $request);
+            }
+        }, -20);
+    }
+
+    protected function captchaAfter(\Symfony\Component\Form\FormInterface $form): int
+    {
+        return (int) ($form->getConfig()->getAttribute('guard_captcha_after') ?? $this->guard->captchaAfter());
+    }
+
+    /** Whether this visitor is shown and asked the form's captcha (base.guard.captcha_after). */
+    protected function captchaAsked(\Symfony\Component\Form\FormInterface $form, ?\Symfony\Component\HttpFoundation\Request $request = null): bool
+    {
+        return $this->guard->captchaAsked($form->getName(), $this->captchaAfter($form), $request ?? $this->requests?->getCurrentRequest());
     }
 
     /**
@@ -186,7 +219,23 @@ class FormTypeGuardExtension extends AbstractTypeExtension
      */
     public function finishView(\Symfony\Component\Form\FormView $view, \Symfony\Component\Form\FormInterface $form, array $options): void
     {
-        if (!$form->isRoot() || !$form->getConfig()->getAttribute('guard_consent') || !isset($view[FormGuard::CHALLENGE_FIELD])) {
+        if (!$form->isRoot() || !isset($view[FormGuard::CHALLENGE_FIELD])) {
+            return;
+        }
+        // Before `captcha_after` refused tries: nothing printed, the widget nor its script (a form_row
+        // or form_rest of a field already rendered prints nothing).
+        if (!$this->captchaAsked($form)) {
+            foreach ([FormGuard::CHALLENGE_FIELD, FormGuard::FALLBACK_FIELD] as $name) {
+                if (isset($view[$name])) {
+                    $view[$name]->vars['omnishield_html'] = '';
+                    $view[$name]->vars['guard_hidden'] = true;
+                    $view[$name]->setRendered();
+                }
+            }
+
+            return;
+        }
+        if (!$form->getConfig()->getAttribute('guard_consent')) {
             return;
         }
         $captcha = $view[FormGuard::CHALLENGE_FIELD];

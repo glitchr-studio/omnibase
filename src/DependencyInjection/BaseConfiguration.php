@@ -787,6 +787,7 @@ class BaseConfiguration extends AbstractBaseConfiguration
                     ->enumNode('unreachable')->values(['accept', 'reject'])->defaultValue('accept')->info('A list or a classifier that does not answer: the form goes on (accept) or is refused (reject). The captcha\'s is omnishield.challenge.unreachable.')->end()
                     ->integerNode('min_delay')->min(0)->defaultValue(3)->info('Seconds between a guarded form being shown and sent: faster is a robot. 0: not checked.')->end()
                     ->integerNode('sign_in_after')->min(0)->defaultValue(3)->info('Failed sign-ins from an address before the sign-in form asks the captcha too. 0: never.')->end()
+                    ->integerNode('captcha_after')->min(0)->defaultValue(3)->info('Refused tries of a guarded form from a visitor (address, else session; 15 minutes) before its captcha is shown and asked. 0: always shown. A form sets its own with the option guard.captcha_after.')->end()
                 ->end()
             ->end()
 

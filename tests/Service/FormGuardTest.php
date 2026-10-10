@@ -29,6 +29,8 @@ use Omnishield\Testing\FixedGateway;
 use Omnishield\Testing\FixedGatewayFactory;
 use Omnishield\WidgetPrinter;
 use PHPUnit\Framework\TestCase;
+use Psr\Cache\CacheItemPoolInterface;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\FormType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
@@ -42,6 +44,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\ConstraintValidatorFactory;
 use Symfony\Component\Validator\ConstraintValidatorInterface;
+use Symfony\Component\Validator\Constraints\NotBlank;
 use Symfony\Component\Validator\Validation;
 
 /**
@@ -80,10 +83,10 @@ class FormGuardTest extends TestCase
     }
 
     /** @param array<string, mixed> $config base.guard */
-    private function forms(array $config = [], ?string $defaultChallenge = 'forms', bool $omnishield = true): FormFactoryInterface
+    private function forms(array $config = [], ?string $defaultChallenge = 'forms', bool $omnishield = true, ?CacheItemPoolInterface $cache = null): FormFactoryInterface
     {
         $registry = $omnishield ? ($this->registry ?? $this->registry(['forms' => ['factory' => 'fixed']])) : null;
-        $guard = new FormGuard(self::SECRET, $config + ['min_delay' => 3], $registry, null, $defaultChallenge);
+        $guard = new FormGuard(self::SECRET, $config + ['min_delay' => 3], $registry, null, $defaultChallenge, cache: $cache);
         $router = $this->createMock(AdvancedRouterInterface::class);
         $router->method('isAdmin')->willReturn(false);
 
@@ -126,10 +129,10 @@ class FormGuardTest extends TestCase
      * @param array<string, mixed> $fields
      * @param array<string, mixed> $post
      */
-    private function send(FormInterface $form, array $fields = [], int $ago = 10, array $post = []): FormInterface
+    private function send(FormInterface $form, array $fields = [], int $ago = 10, array $post = [], string $ip = '203.0.113.7'): FormInterface
     {
         $data = $fields + ['name' => 'Anne', 'email' => 'anne@example.org', FormGuard::TRAP_FIELD => '', FormGuard::STAMP_FIELD => (new FormGuard(self::SECRET))->stamp(time() - $ago)];
-        $this->requests->push(Request::create('/contact', 'POST', $post + ['contact' => $data]));
+        $this->requests->push(Request::create('/contact', 'POST', $post + [$form->getName() => $data], [], [], ['REMOTE_ADDR' => $ip]));
         $form->submit($data);
 
         return $form;
@@ -293,6 +296,84 @@ class FormGuardTest extends TestCase
         $this->assertFalse($form->has(FormGuard::TRAP_FIELD) || $form->has(FormGuard::STAMP_FIELD) || $form->has(FormGuard::CHALLENGE_FIELD));
         $form->submit(['name' => 'Anne', 'email' => 'anne@example.org']);
         $this->assertTrue($form->isValid());
+    }
+
+    /** The page as the visitor at $ip reads it: whether the form prints its captcha. */
+    private function shows(FormInterface $form, string $ip = '203.0.113.7'): bool
+    {
+        $this->requests->push(Request::create('/contact', 'GET', [], [], [], ['REMOTE_ADDR' => $ip]));
+        $captcha = $form->createView()[FormGuard::CHALLENGE_FIELD];
+        $this->requests->pop();
+
+        return !$captcha->isRendered() && '' !== $captcha->vars['omnishield_html'];
+    }
+
+    public function testBelowCaptchaAfterTheCaptchaIsNeitherShownNorAsked(): void
+    {
+        $forms = $this->forms(['captcha_after' => 3], cache: new ArrayAdapter());
+
+        $this->assertFalse($this->shows($this->form($forms)), 'no widget on the first visit');
+        $form = $this->send($this->form($forms));
+        $this->assertTrue($form->isValid(), 'sent without a token: '.json_encode($this->errors($form)));
+
+        // The trap and the time stay, below the threshold too.
+        $this->assertSame(['' => [FormGuard::TRAPPED]], $this->errors($this->send($this->form($forms), [FormGuard::TRAP_FIELD => 'x'])));
+        $this->assertSame(['' => [FormGuard::TOO_FAST]], $this->errors($this->send($this->form($forms), ago: 0)));
+        $this->assertFalse($this->shows($this->form($forms)), 'two refusals: still below three');
+    }
+
+    public function testFromCaptchaAfterRefusedTriesTheCaptchaIsShownAndAsked(): void
+    {
+        $forms = $this->forms(['captcha_after' => 3], cache: new ArrayAdapter());
+        for ($i = 0; $i < 3; ++$i) {
+            $this->assertSame(['' => [FormGuard::TOO_FAST]], $this->errors($this->send($this->form($forms), ago: 0)));
+        }
+
+        // The form refused the third time, printed again as it is: the widget is there now.
+        $refused = $this->form($forms);
+        $this->send($refused, ago: 0);
+        $this->requests->push(Request::create('/contact', 'POST', [], [], [], ['REMOTE_ADDR' => '203.0.113.7']));
+        $view = $refused->createView()[FormGuard::CHALLENGE_FIELD];
+        $this->assertFalse($view->isRendered());
+        $this->assertNotSame('', $view->vars['omnishield_html']);
+        $this->assertTrue($this->shows($this->form($forms)));
+
+        $this->assertSame([FormGuard::CHALLENGE_FIELD => [FormGuard::CHALLENGE_MISSING]], $this->errors($this->send($this->form($forms))), 'the token is asked');
+        $this->assertTrue($this->send($this->form($forms), post: $this->token())->isValid(), 'with it, sent');
+
+        // A form sent forgets the tries.
+        $this->assertFalse($this->shows($this->form($forms)));
+        $this->assertTrue($this->send($this->form($forms))->isValid());
+    }
+
+    public function testTriesAreCountedPerFormAndVisitorAndAnInvalidFormIsOne(): void
+    {
+        $forms = $this->forms(['captcha_after' => 1], cache: new ArrayAdapter());
+        $required = fn (string $name) => $forms->createNamedBuilder($name, FormType::class, null, ['guard' => true, 'spam_protection' => false])
+            ->add('name', TextType::class, ['constraints' => [new NotBlank()]])->add('email', EmailType::class)->getForm();
+
+        // An invalid form - no guard's refusal - is a try.
+        $this->assertArrayHasKey('name', $this->errors($this->send($required('contact'), ['name' => ''])));
+        $this->assertTrue($this->shows($required('contact')));
+        $this->assertFalse($this->shows($required('newsletter')), 'another form');
+        $this->assertFalse($this->shows($required('contact'), '198.51.100.4'), 'another visitor');
+    }
+
+    public function testAFormSetsItsOwnThresholdAndZeroAlwaysShows(): void
+    {
+        $cache = new ArrayAdapter();
+        $forms = $this->forms(['captcha_after' => 3], cache: $cache);
+
+        // `captcha_after: 1`, the newsletter's: one refusal is enough.
+        $this->send($this->form($forms, ['captcha_after' => 1]), ago: 0);
+        $this->assertTrue($this->shows($this->form($forms, ['captcha_after' => 1])));
+        $this->assertFalse($this->shows($this->form($forms)), 'the site\'s three: not yet');
+
+        // 0: always, as before the threshold - so is base.guard.captcha_after: 0, and a guard without a cache.
+        $this->assertTrue($this->shows($this->form($this->forms(cache: new ArrayAdapter()), ['captcha_after' => 0])));
+        $this->assertTrue($this->shows($this->form($this->forms(['captcha_after' => 0], cache: new ArrayAdapter()))));
+        $this->assertTrue($this->shows($this->form($this->forms(['captcha_after' => 3]))));
+        $this->assertSame(3, (new FormGuard(self::SECRET))->captchaAfter(), 'three by default');
     }
 
     public function testTheListsAreAskedAboutTheSender(): void

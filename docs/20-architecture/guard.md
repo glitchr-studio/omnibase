@@ -17,7 +17,7 @@ $this->createForm(ContactType::class, $model, ['guard' => ['action' => 'contact'
 | 1. the trap | `guard_website`, a field off-screen for people, filled by robots | refused, on the form (`guard.trapped`) |
 | 2. the time | `guard_opened`, when the form was shown, signed with the application's secret | refused when sent faster than `min_delay` (`guard.too_fast`), or with a stamp that is not the site's (`guard.stale`) |
 | 3. the lists | whoever sends it - the address, the e-mail, the name - asked of the gateways of `base.guard.reputation` | a disposable e-mail on its field (`guard.disposable`); anything else known on the form (`guard.known`) |
-| 4. the captcha | `guard_captcha`, glitchr/omnishield's `ChallengeType` on the gateway of `base.guard.challenge` | its own constraint, on its field |
+| 4. the captcha | `guard_captcha`, glitchr/omnishield's `ChallengeType` on the gateway of `base.guard.challenge` - shown and asked only from `captcha_after` refused tries (below) | on its field |
 | 5. what was written | data implementing `SpamProtectionInterface`, classified by `SpamChecker` (Akismet) | told to the data (`getSpamCallback()`); blatant spam refused (`guard.spam`) |
 
 Step 5 is `spam_protection`, on by default outside the back office as it always was: it runs
@@ -37,6 +37,27 @@ The messages are the `forms` domain's `guard.*` (French and English), the captch
 | `action` | the form's name | what the form is for, signed into the captcha's token |
 | `reputation` | `true` | ask the lists |
 | `email`, `name` | `email`, `name` | the fields - or the data's properties - holding the sender's e-mail and name |
+| `captcha_after` | `base.guard.captcha_after` (3) | refused tries of this form, from this visitor, before its captcha is shown and asked; 0: always |
+
+## The captcha after a few refused tries
+
+A visitor who fills a form once does not see the captcha. Each try of a guarded form that is
+refused - by the guard (trap, time, lists, the classifier's spam) or because the form is invalid -
+counts one for that form and that visitor (the address, else the session; in `cache.app`, for 15
+minutes); a form sent forgets them. From `captcha_after` tries on, the form prints the widget and
+the guard asks its token; below, nothing of the captcha is printed (neither the widget nor its
+script) and no token is asked. The trap, the time and the lists are asked every time.
+
+The form refused at the threshold, printed again, carries the widget: the field is always in the
+form, printed or not. Without `cache.app` - or without an address or a session to count by - the
+captcha is always shown, as it was before the threshold. `captcha_after: 0`, on a form or in
+`base.guard`, does the same.
+
+| Form | `captcha_after` |
+|---|---|
+| any guarded form | `base.guard.captcha_after`, 3 |
+| omnibase/newsletter's sign-up | 1: one refusal and the captcha shows |
+| the sign-in | 0: `SignInGuard` decides when it carries the captcha (`sign_in_after`) |
 
 ## Without glitchr/omnishield
 
@@ -73,6 +94,7 @@ base:
         unreachable: accept      # a list or a classifier that does not answer: accept, or reject
         min_delay: 3
         sign_in_after: 3         # failed sign-ins from an address before the sign-in asks the captcha
+        captcha_after: 3         # refused tries of a form from a visitor before it shows its captcha; 0: always
 ```
 
 The captcha's own conduct when its provider does not answer is omnishield's
@@ -134,7 +156,8 @@ when@test:
 
 With `factory: fixed` as the test captcha, the page prints a hidden `omnishield-token` field
 holding `omnishield-fixed-token`, outside the form: a test client that submits the page's form
-sends it; a request built by hand adds it.
+sends it; a request built by hand adds it. Below `captcha_after` the page prints no captcha and
+none is asked: a token posted all the same is not read.
 
 ## The comment forms
 

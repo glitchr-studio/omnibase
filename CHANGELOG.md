@@ -7,6 +7,7 @@ Versions follow the branch-per-major scheme: branch `3.x` → tags `3.0.0`,
 ## [Unreleased]
 
 ### Changed
+- A guarded form shows its captcha only after a few refused tries: `base.guard.captcha_after` (3) and the option `guard.captcha_after`, counted per form and visitor (address, else session) in `cache.app` for 15 minutes, forgotten after a form sent; below, no widget printed and no token asked. `0` keeps the captcha always shown, as before.
 - The forms' guard speaks to `glitchr/omnishield`, the family formerly named `glitchr/omniguard` (renamed on 2026-10-10: the vendor `omniguard` on Packagist belongs to another project): `omnishield/*` in `suggest` and `require-dev`, `Omnishield\` classes, the configuration `omnishield:`, the test token `omnishield-fixed-token`. `FormGuard`, the option `guard` and `base.guard` keep their names.
 
 ### Changed

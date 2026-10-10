@@ -40,7 +40,9 @@ return static function (ContainerConfigurator $container): void {
     $services->set('Base\Service\FormGuard')->public()
         ->arg('$registry', service('Omnishield\Registry')->nullOnInvalid())
         ->arg('$comments', service('Base\Repository\Thread\CommentRepository')->nullOnInvalid())
-        ->arg('$logger', service('logger')->nullOnInvalid());
+        ->arg('$logger', service('logger')->nullOnInvalid())
+        // A form's refused tries, before its captcha shows (base.guard.captcha_after).
+        ->arg('$cache', service('cache.app')->nullOnInvalid());
     $services->set('Base\Service\CommentGuard')->public();
     // Documents signed through glitchr/omnisign, for any entity (Base\Entity\Signature\Envelope, mapped only
     // then too): suggested, not required - registered when the family is installed; its gateways when its

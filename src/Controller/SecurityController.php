@@ -151,7 +151,7 @@ class SecurityController extends AbstractController
                 "allow_login_token" => $this->parameterBag->get("base.user.login_with_token"),
                 // After a few failed sign-ins from this address, the captcha (SignInGuard checks it).
                 "guard" => null !== ($gateway = $signInGuard?->required($request))
-                    ? ["trap" => false, "min_delay" => 0, "reputation" => false, "challenge" => $gateway, "action" => SignInGuard::ACTION]
+                    ? ["trap" => false, "min_delay" => 0, "reputation" => false, "challenge" => $gateway, "action" => SignInGuard::ACTION, "captcha_after" => 0]
                     : false,
             ])
             ->handleRequest($request);
