@@ -318,7 +318,9 @@ return static function (ContainerConfigurator $container): void {
             service('twig'),
             service('setting_bag'),
         ])
-        ->bind('$debug', '%kernel.debug%');
+        ->bind('$debug', '%kernel.debug%')
+        // what could not be sent is said there (BaseNotifier::send)
+        ->call('setLogger', [service('logger')->ignoreOnInvalid()]);
 
     // LocalCache / CacheWarmers
     $cacheServices = [

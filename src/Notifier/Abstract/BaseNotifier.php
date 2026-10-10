@@ -17,7 +17,12 @@ use Base\Service\SettingBag;
 use Base\Service\LocalizerInterface;
 use Base\Service\ParameterBagInterface;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface as MailerTransportException;
 use Symfony\Component\Mailer\Mailer;
+use Symfony\Component\Messenger\Exception\HandlerFailedException;
+use Symfony\Component\Notifier\Exception\TransportExceptionInterface as NotifierTransportException;
 use Symfony\Component\Notifier\Notification\Notification as SymfonyNotification;
 use Symfony\Component\Notifier\Notifier as SymfonyNotifier;
 use Symfony\Component\Notifier\NotifierInterface as SymfonyNotifierInterface;
@@ -39,8 +44,10 @@ use Symfony\Component\Notifier\Recipient\SmsRecipientInterface;
 use Symfony\Component\PropertyAccess\Exception\AccessException;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
-abstract class BaseNotifier implements BaseNotifierInterface
+abstract class BaseNotifier implements BaseNotifierInterface, LoggerAwareInterface
 {
+    use LoggerAwareTrait;
+
     /**
      * @param $method
      * @param $arguments
@@ -552,13 +559,43 @@ abstract class BaseNotifier implements BaseNotifierInterface
             $timezone = $recipient instanceof TimezoneRecipientInterface ? $recipient->getTimezone() : "UTC";
             date_default_timezone_set($timezone);
 
-            // Payload..
-            $this->notifier->send($notification, $recipient);
+            // Payload.. A message that cannot leave (the mail server unreachable, its
+            // host unknown) is said in the log, never thrown at the page that sent it:
+            // the payment page answered 500 when the confirmation could not go out.
+            // Through the queue, Messenger retries it; handled at once (sync://), the
+            // failure is all there is to say.
+            try {
+                $this->notifier->send($notification, $recipient);
+            } catch (\Throwable $e) {
+                if (!self::isTransportFailure($e)) {
+                    throw $e;
+                }
+                $this->logger?->error('The notification "{subject}" could not be sent: {error}', [
+                    'subject' => $notification->getSubject(),
+                    'error' => $e->getMessage(),
+                    'exception' => $e,
+                ]);
+            }
         }
 
         // Put back previous locale and timezone
         $this->localizer->setLocale($localeBak);
         date_default_timezone_set($timezoneBak);
+    }
+
+    /** A transport that failed - the mailer's, a notifier channel's, wrapped by Messenger when handled at once - and not a fault of the message itself. */
+    private static function isTransportFailure(\Throwable $e): bool
+    {
+        if ($e instanceof MailerTransportException || $e instanceof NotifierTransportException) {
+            return true;
+        }
+        if (class_exists(HandlerFailedException::class) && $e instanceof HandlerFailedException) {
+            $failures = $e->getWrappedExceptions(null, true);
+
+            return [] !== $failures && [] === array_filter($failures, static fn (\Throwable $f) => !self::isTransportFailure($f) && !$f instanceof HandlerFailedException);
+        }
+
+        return false;
     }
 
     /**
